@@ -2382,6 +2382,7 @@ dependencies = [
  "ggez",
  "glam",
  "image 0.24.1",
+ "rand",
 ]
 
 [[package]]

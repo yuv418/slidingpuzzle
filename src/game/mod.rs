@@ -7,16 +7,17 @@ use image::GenericImageView;
 use image::Pixel;
 use rand::Rng;
 use std::path::PathBuf;
+use std::rc::Rc;
 
 pub mod tile;
 
 #[derive(Debug)]
-pub struct GameState<'a> {
-    pub tile_state: tile::TileState<'a>,
+pub struct GameState {
+    pub tile_state: tile::TileState,
     pub set_winsize: bool,
 }
 
-impl GameState<'_> {
+impl GameState {
     pub fn new(img_path: PathBuf, tile_size: u32, context: &mut Context) -> GameResult<Self> {
         let img = ImageReader::open(img_path)?
             .decode()
@@ -28,8 +29,9 @@ impl GameState<'_> {
 
         // Loop through and make the tiles
         let mut tile_state = tile::TileState {
-            tiles: vec![vec![None; col_cnt_tiles as usize]; row_cnt_tiles as usize],
+            tiles: vec![],
             ref_board: vec![vec![None; col_cnt_tiles as usize]; row_cnt_tiles as usize],
+            blank_cell: (0, 0),
         };
 
         // Go through each row of tiles, looping through each tile in the row
@@ -59,23 +61,40 @@ impl GameState<'_> {
                         &row_buf_pix,
                     )?,
                 };
+                tile_row.push(Rc::new(tile_to_insert));
+            }
 
+            tile_state.tiles.push(tile_row);
+        }
+        for i in 0..row_cnt_tiles {
+            for j in 0..col_cnt_tiles {
                 let i = i as usize;
                 let j = j as usize;
-
-                tile_state.tiles[i][j] = tile_to_insert;
-                tile_state.ref_board[i][j] = Some(&tile_state.tiles[i][j]);
-                tile_row.push(tile_to_insert);
+                tile_state.ref_board[i][j] = Some(tile_state.tiles[i][j].clone());
             }
         }
 
-        // Remove one random tile from ref board.
         let mut rng = rand::thread_rng();
 
-        // scramble the tiles in tile_state.tile_order
+        // Scramble the tiles in tile_state.ref_board
+        for _ in 1..100 {
+            // This is so low effort
+            let tile1 = (
+                rng.gen_range(0..row_cnt_tiles) as usize,
+                rng.gen_range(0..col_cnt_tiles) as usize,
+            );
+            let tile2 = (
+                rng.gen_range(0..row_cnt_tiles) as usize,
+                rng.gen_range(0..col_cnt_tiles) as usize,
+            );
+            tile_state.swap_ref_tiles(tile1, tile2)
+        }
+
+        // Remove one random tile from ref board.
         let i = rng.gen_range(0..row_cnt_tiles) as usize;
         let j = rng.gen_range(0..col_cnt_tiles) as usize;
         tile_state.ref_board[i][j] = None;
+        tile_state.blank_cell = (i, j);
 
         Ok(Self {
             tile_state,
@@ -84,7 +103,7 @@ impl GameState<'_> {
     }
 }
 
-impl event::EventHandler<ggez::GameError> for GameState<'_> {
+impl event::EventHandler<ggez::GameError> for GameState {
     fn key_down_event(
         &mut self,
         ctx: &mut Context,
@@ -92,8 +111,37 @@ impl event::EventHandler<ggez::GameError> for GameState<'_> {
         _keymods: event::KeyMods,
         repeat: bool,
     ) {
+        let i = self.tile_state.blank_cell.0;
+        let j = self.tile_state.blank_cell.1;
         if !repeat {
-            println!("key down event {:?}", keycode);
+            // TODO make this DRYer
+            match keycode {
+                event::KeyCode::Up => {
+                    // Tile below space
+                    if i + 1 < self.tile_state.ref_board.len() {
+                        self.tile_state.swap_ref_tiles((i, j), (i + 1, j));
+                    }
+                }
+                event::KeyCode::Down => {
+                    // Tile above space
+                    if i != 0 {
+                        self.tile_state.swap_ref_tiles((i, j), (i - 1, j));
+                    }
+                }
+                event::KeyCode::Left => {
+                    // Tile left of space
+                    if j + 1 < self.tile_state.ref_board[i].len() {
+                        self.tile_state.swap_ref_tiles((i, j), (i, j + 1));
+                    }
+                }
+                event::KeyCode::Right => {
+                    // Tile right of space
+                    if j != 0 {
+                        self.tile_state.swap_ref_tiles((i, j), (i, j - 1));
+                    }
+                }
+                _ => {}
+            }
         }
     }
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
@@ -108,9 +156,9 @@ impl event::EventHandler<ggez::GameError> for GameState<'_> {
         // draw all tiles with a 10px gap between each title
         for i in 0..self.tile_state.ref_board.len() {
             // each tile in the row, so x
-            for j in 0..self.tile_state.tiles[i].len() {
-                let tile = &self.tile_state.tiles[i][j];
-                if let Some(&tile) = tile {
+            for j in 0..self.tile_state.ref_board[i].len() {
+                let tile = &self.tile_state.ref_board[i][j];
+                if let Some(tile) = tile {
                     let tile_gap = tile.side_len + 10; // determine the gap here
 
                     graphics::draw(
