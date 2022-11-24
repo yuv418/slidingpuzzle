@@ -6,6 +6,7 @@ use image::io::Reader as ImageReader;
 use image::GenericImageView;
 use image::Pixel;
 use rand::Rng;
+use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -56,8 +57,9 @@ impl GameState {
                         tile_size as u16,
                         &row_buf_pix,
                     )?,
+                    animate_from: None,
                 };
-                tile_row.push(Rc::new(tile_to_insert));
+                tile_row.push(Rc::new(RefCell::new(tile_to_insert)));
             }
 
             tile_state.tiles.push(tile_row);
@@ -84,7 +86,7 @@ impl GameState {
                 rng.gen_range(0..row_cnt_tiles) as usize,
                 rng.gen_range(0..col_cnt_tiles) as usize,
             );
-            tile_state.swap_ref_tiles(tile1, tile2)
+            tile_state.swap_ref_tiles(tile1, tile2, false)
         }
 
         // Remove one random tile from ref board.
@@ -116,31 +118,30 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 event::KeyCode::Up => {
                     // Tile below space
                     if i + 1 < self.tile_state.ref_board.len() {
-                        self.tile_state.swap_ref_tiles((i, j), (i + 1, j));
+                        self.tile_state.swap_ref_tiles((i, j), (i + 1, j), true);
                     }
                 }
                 event::KeyCode::Down => {
                     // Tile above space
                     if i != 0 {
-                        self.tile_state.swap_ref_tiles((i, j), (i - 1, j));
+                        self.tile_state.swap_ref_tiles((i, j), (i - 1, j), true);
                     }
                 }
                 event::KeyCode::Left => {
                     // Tile left of space
                     if j + 1 < self.tile_state.ref_board[i].len() {
-                        self.tile_state.swap_ref_tiles((i, j), (i, j + 1));
+                        self.tile_state.swap_ref_tiles((i, j), (i, j + 1), true);
                     }
                 }
                 event::KeyCode::Right => {
                     // Tile right of space
                     if j != 0 {
-                        self.tile_state.swap_ref_tiles((i, j), (i, j - 1));
+                        self.tile_state.swap_ref_tiles((i, j), (i, j - 1), true);
                     }
                 }
                 _ => {}
             }
             self.tile_state.check_completed();
-            println!("{}", self.tile_state.game_completed());
         }
     }
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
@@ -156,7 +157,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
         for i in 0..self.tile_state.ref_board.len() {
             // each tile in the row, so x
             for j in 0..self.tile_state.ref_board[i].len() {
-                let tile = if !self.tile_state.game_completed() {
+                let mut tile = if !self.tile_state.game_completed() {
                     if let Some(tile) = &self.tile_state.ref_board[i][j] {
                         tile
                     } else {
@@ -164,17 +165,110 @@ impl event::EventHandler<ggez::GameError> for GameState {
                     }
                 } else {
                     &self.tile_state.tiles[i][j]
-                };
+                }
+                .borrow_mut();
 
                 let tile_gap = tile.side_len + 10; // determine the gap here
-                graphics::draw(
-                    ctx,
-                    &tile.image_buf,
-                    (Vec2::new(
-                        (j as u32 * tile_gap) as f32 + 90.0,
-                        (i as u32 * tile_gap) as f32 + 150.0,
-                    ),),
-                )?;
+                if let Some((i1, j1, mut pos)) = tile.animate_from {
+                    if let None = self.tile_state.ref_board[i1][j1] {
+                        if tile::Tile::adjacent((i, j), (i1, j1)) {
+                            if j > j1 {
+                                // Move right
+                                println!("Animate move right {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(j1 as u32 * tile_gap)));
+                                } else if pos < Some(j as u32 * tile_gap) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() + 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 90.0,
+                                            (i as u32 * tile_gap) as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                            } else if j1 > j {
+                                println!("Animate move left {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(j1 as u32 * tile_gap)));
+                                } else if pos > Some(j as u32 * tile_gap) && pos > Some(20) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() - 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 90.0,
+                                            (i as u32 * tile_gap) as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                                // Move left
+                            } else if i1 > i {
+                                // Move up
+                                println!("Animate move up {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(i1 as u32 * tile_gap)));
+                                } else if pos > Some(i as u32 * tile_gap) && pos > Some(20) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() - 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            (j as u32 * tile_gap) as f32 + 90.0,
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                            } else if i > i1 {
+                                // Move down
+                                println!("Animate move down {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(i1 as u32 * tile_gap)));
+                                } else if pos < Some(i as u32 * tile_gap) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() + 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            (j as u32 * tile_gap) as f32 + 90.0,
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    graphics::draw(
+                        ctx,
+                        &tile.image_buf,
+                        (Vec2::new(
+                            (j as u32 * tile_gap) as f32 + 90.0,
+                            (i as u32 * tile_gap) as f32 + 150.0,
+                        ),),
+                    )?;
+                }
             }
         }
         graphics::present(ctx)?;

@@ -31,7 +31,7 @@ pub fn main() -> GameResult {
       60 + [        width        ] + 60
            180 px bottom padding
     */
-    let tile_gap = state.tile_state.tiles[0][0].side_len + 10; // determine the gap here
+    let tile_gap = state.tile_state.tiles[0][0].borrow().side_len + 10; // determine the gap here
     let win_width = (180 + (state.tile_state.tiles[0].len() as u32 * tile_gap)) as f32;
     let win_height = (300 + (tile_gap * state.tile_state.tiles.len() as u32)) as f32;
     println!("the new window dimensions are {}x{}", win_width, win_height);
