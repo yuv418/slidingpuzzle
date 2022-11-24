@@ -74,6 +74,12 @@ impl GameState {
 
         let mut rng = rand::thread_rng();
 
+        // Remove one random tile from ref board.
+        let i = rng.gen_range(0..row_cnt_tiles) as usize;
+        let j = rng.gen_range(0..col_cnt_tiles) as usize;
+        tile_state.ref_board[i][j] = None;
+        tile_state.blank_cell = (i, j);
+
         // Scramble the tiles in tile_state.ref_board
         for _ in 1..100 {
             // This is so low effort
@@ -82,18 +88,67 @@ impl GameState {
                 rng.gen_range(0..row_cnt_tiles) as usize,
                 rng.gen_range(0..col_cnt_tiles) as usize,
             );
-            let tile2 = (
-                rng.gen_range(0..row_cnt_tiles) as usize,
-                rng.gen_range(0..col_cnt_tiles) as usize,
-            );
-            tile_state.swap_ref_tiles(tile1, tile2, false)
-        }
+            // Choose a random adjacent tile
+            let replacetile = if tile_state.blank_cell == (0, 0) {
+                rng.gen_range(0..2) as usize
+            } else if tile_state.blank_cell == (0, col_cnt_tiles as usize - 1) {
+                let r = rng.gen_range(0..2);
+                (if r == 1 { 2 } else { r } as usize)
+            } else if tile_state.blank_cell
+                == (row_cnt_tiles as usize - 1, col_cnt_tiles as usize - 1)
+            {
+                let r = rng.gen_range(0..2);
+                (if r == 0 { 3 } else { 2 } as usize)
+            } else if tile_state.blank_cell == (row_cnt_tiles as usize - 1, 0) {
+                let r = rng.gen_range(0..2);
+                (if r == 0 { 3 } else { r } as usize)
+            }
+            // Left edge
+            else if tile_state.blank_cell.1 == 0 {
+                let r = rng.gen_range(0..3);
+                (if r == 2 { 3 } else { r } as usize)
+            }
+            // Top edge
+            else if tile_state.blank_cell.0 == 0 {
+                rng.gen_range(0..3)
+            }
+            // Right edge
+            else if tile_state.blank_cell.1 == col_cnt_tiles as usize - 1 {
+                let r = rng.gen_range(0..3);
+                (if r == 1 { 3 } else { r } as usize)
+            }
+            // Bottom edge
+            else if tile_state.blank_cell.0 == row_cnt_tiles as usize - 1 {
+                rng.gen_range(0..3) + 1
+            } else {
+                rng.gen_range(0..4) as usize
+            };
 
-        // Remove one random tile from ref board.
-        let i = rng.gen_range(0..row_cnt_tiles) as usize;
-        let j = rng.gen_range(0..col_cnt_tiles) as usize;
-        tile_state.ref_board[i][j] = None;
-        tile_state.blank_cell = (i, j);
+            let (c1, c2) = tile_state.blank_cell;
+
+            println!("swap {:?} {:?}", tile_state.blank_cell, replacetile);
+            let tile2 = match replacetile {
+                0 => {
+                    // Down
+                    (c1 + 1, c2)
+                }
+                1 => {
+                    // Right
+                    (c1, c2 + 1)
+                }
+                2 => {
+                    // Left
+                    (c1, c2 - 1)
+                }
+                3 => {
+                    // Up
+                    (c1 - 1, c2)
+                }
+                _ => panic!("Should never happen"),
+            };
+
+            tile_state.swap_ref_tiles(tile_state.blank_cell, tile2, false)
+        }
 
         Ok(Self {
             tile_state,
