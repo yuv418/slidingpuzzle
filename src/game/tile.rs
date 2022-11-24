@@ -27,4 +27,7 @@ impl TileState {
         self.ref_board[i1][j1] = self.ref_board[i2][j2].clone();
         self.ref_board[i2][j2] = old_tile;
     }
+    pub fn check_completed(&self) -> bool {
+        false
+    }
 }

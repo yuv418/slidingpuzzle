@@ -79,6 +79,7 @@ impl GameState {
         // Scramble the tiles in tile_state.ref_board
         for _ in 1..100 {
             // This is so low effort
+            // Better method: start with gap at 0,0 and swap the gap with random adjacents over and over
             let tile1 = (
                 rng.gen_range(0..row_cnt_tiles) as usize,
                 rng.gen_range(0..col_cnt_tiles) as usize,
@@ -142,6 +143,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 }
                 _ => {}
             }
+            self.tile_state.check_completed();
         }
     }
     fn update(&mut self, _ctx: &mut Context) -> GameResult {

@@ -19,7 +19,7 @@ pub fn main() -> GameResult {
         )
         .build()?;
 
-    let state = game::GameState::new("test.jpg".into(), 120, &mut ctx)?;
+    let state = game::GameState::new("test.jpg".into(), 180, &mut ctx)?;
 
     /*
              180 px top padding
