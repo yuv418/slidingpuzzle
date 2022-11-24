@@ -28,11 +28,7 @@ impl GameState {
         let row_cnt_tiles = img.height() / tile_size;
 
         // Loop through and make the tiles
-        let mut tile_state = tile::TileState {
-            tiles: vec![],
-            ref_board: vec![vec![None; col_cnt_tiles as usize]; row_cnt_tiles as usize],
-            blank_cell: (0, 0),
-        };
+        let mut tile_state = tile::TileState::new(row_cnt_tiles as usize, col_cnt_tiles as usize);
 
         // Go through each row of tiles, looping through each tile in the row
         for i in 1..(row_cnt_tiles + 1) {
@@ -114,7 +110,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
     ) {
         let i = self.tile_state.blank_cell.0;
         let j = self.tile_state.blank_cell.1;
-        if !repeat {
+        if !repeat && !self.tile_state.game_completed() {
             // TODO make this DRYer
             match keycode {
                 event::KeyCode::Up => {
@@ -144,6 +140,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 _ => {}
             }
             self.tile_state.check_completed();
+            println!("{}", self.tile_state.game_completed());
         }
     }
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
@@ -159,19 +156,25 @@ impl event::EventHandler<ggez::GameError> for GameState {
         for i in 0..self.tile_state.ref_board.len() {
             // each tile in the row, so x
             for j in 0..self.tile_state.ref_board[i].len() {
-                let tile = &self.tile_state.ref_board[i][j];
-                if let Some(tile) = tile {
-                    let tile_gap = tile.side_len + 10; // determine the gap here
+                let tile = if !self.tile_state.game_completed() {
+                    if let Some(tile) = &self.tile_state.ref_board[i][j] {
+                        tile
+                    } else {
+                        continue;
+                    }
+                } else {
+                    &self.tile_state.tiles[i][j]
+                };
 
-                    graphics::draw(
-                        ctx,
-                        &tile.image_buf,
-                        (Vec2::new(
-                            (j as u32 * tile_gap) as f32 + 90.0,
-                            (i as u32 * tile_gap) as f32 + 150.0,
-                        ),),
-                    )?;
-                }
+                let tile_gap = tile.side_len + 10; // determine the gap here
+                graphics::draw(
+                    ctx,
+                    &tile.image_buf,
+                    (Vec2::new(
+                        (j as u32 * tile_gap) as f32 + 90.0,
+                        (i as u32 * tile_gap) as f32 + 150.0,
+                    ),),
+                )?;
             }
         }
         graphics::present(ctx)?;
