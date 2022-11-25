@@ -2,9 +2,11 @@ use std::{cell::RefCell, rc::Rc};
 
 use ggez::{
     graphics::{self, Image},
-    Context,
+    Context, GameResult,
 };
 use glam::Vec2;
+
+use crate::game::drawable::Drawable;
 
 #[derive(Debug, Clone)]
 pub struct Tile {
@@ -25,6 +27,11 @@ impl Tile {
         }
     }
 }
+impl Drawable for Tile {
+    fn draw(&mut self, ctx: &mut Context, x: f32, y: f32) -> GameResult {
+        graphics::draw(ctx, &self.image_buf, (Vec2::new(x, y),))
+    }
+}
 
 #[derive(Debug)]
 pub struct TileState {
@@ -32,6 +39,7 @@ pub struct TileState {
     pub ref_board: Vec<Vec<Option<Rc<RefCell<Tile>>>>>,
     // For efficiency purposes
     pub blank_cell: (usize, usize),
+    pub drawing_animation: bool,
     game_completed: bool,
 }
 
@@ -41,6 +49,7 @@ impl TileState {
             tiles: vec![],
             ref_board: vec![vec![None; col_cnt_tiles as usize]; row_cnt_tiles as usize],
             blank_cell: (0, 0),
+            drawing_animation: false,
             game_completed: false,
         }
     }
@@ -86,5 +95,143 @@ impl TileState {
 
     pub fn game_completed(&self) -> bool {
         self.game_completed
+    }
+}
+
+impl Drawable for TileState {
+    fn draw(&mut self, ctx: &mut Context, x: f32, y: f32) -> GameResult {
+        // draw like one tile
+
+        graphics::clear(ctx, [1.0, 1.0, 1.0, 1.0].into());
+
+        // draw all tiles with a 10px gap between each title
+        for i in 0..self.ref_board.len() {
+            // each tile in the row, so x
+            for j in 0..self.ref_board[i].len() {
+                let mut tile = if !self.game_completed() {
+                    if let Some(tile) = &self.ref_board[i][j] {
+                        tile
+                    } else {
+                        continue;
+                    }
+                } else {
+                    &self.tiles[i][j]
+                }
+                .borrow_mut();
+
+                let tile_gap = tile.side_len + 10; // determine the gap here
+                if let Some((i1, j1, mut pos)) = tile.animate_from {
+                    if let None = self.ref_board[i1][j1] {
+                        if Tile::adjacent((i, j), (i1, j1)) {
+                            if j > j1 {
+                                // Move right
+                                println!("Animate move right {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(j1 as u32 * tile_gap)));
+                                    self.drawing_animation = true;
+                                } else if pos < Some(j as u32 * tile_gap) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() + 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                    self.drawing_animation = false;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 90.0,
+                                            (i as u32 * tile_gap) as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                            } else if j1 > j {
+                                println!("Animate move left {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(j1 as u32 * tile_gap)));
+                                    self.drawing_animation = true;
+                                } else if pos > Some(j as u32 * tile_gap) && pos > Some(20) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() - 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                    self.drawing_animation = false;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 90.0,
+                                            (i as u32 * tile_gap) as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                                // Move left
+                            } else if i1 > i {
+                                // Move up
+                                println!("Animate move up {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(i1 as u32 * tile_gap)));
+                                    self.drawing_animation = true;
+                                } else if pos > Some(i as u32 * tile_gap) && pos > Some(20) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() - 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                    self.drawing_animation = false;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            (j as u32 * tile_gap) as f32 + 90.0,
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                            } else if i > i1 {
+                                // Move down
+                                println!("Animate move down {:?}", tile.animate_from);
+                                if let None = tile.animate_from.unwrap().2 {
+                                    tile.animate_from = Some((i1, j1, Some(i1 as u32 * tile_gap)));
+                                    self.drawing_animation = true;
+                                } else if pos < Some(i as u32 * tile_gap) {
+                                    tile.animate_from = Some((i1, j1, Some(pos.unwrap() + 20)));
+                                } else {
+                                    tile.animate_from = None;
+                                    self.drawing_animation = false;
+                                }
+
+                                if let Some(_) = tile.animate_from {
+                                    graphics::draw(
+                                        ctx,
+                                        &tile.image_buf,
+                                        (Vec2::new(
+                                            (j as u32 * tile_gap) as f32 + 90.0,
+                                            tile.animate_from.unwrap().2.unwrap() as f32 + 150.0,
+                                        ),),
+                                    )?;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    graphics::draw(
+                        ctx,
+                        &tile.image_buf,
+                        (Vec2::new(
+                            (j as u32 * tile_gap) as f32 + 90.0,
+                            (i as u32 * tile_gap) as f32 + 150.0,
+                        ),),
+                    )?;
+                }
+            }
+        }
+        graphics::present(ctx)?;
+
+        Ok(())
     }
 }
