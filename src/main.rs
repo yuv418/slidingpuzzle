@@ -43,7 +43,6 @@ pub fn main() -> GameResult {
             .resizable(true),
     )?;
     graphics::set_screen_coordinates(&mut ctx, Rect::new(0.0, 0.0, win_width, win_height))?;
-    graphics::set_resizable(&mut ctx, false);
 
     event::run(ctx, event_loop, state)
 }
