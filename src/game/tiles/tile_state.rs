@@ -4,6 +4,7 @@ use rand::Rng;
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use ggez::{
+    event,
     graphics::{self, Image},
     Context, GameResult,
 };
@@ -13,6 +14,7 @@ use crate::game::drawable::Drawable;
 use super::{Tile, TilePosition};
 
 const TOTAL_SCRAMBLE_SWAPS: u32 = 50;
+const TILE_SLIDE_DURATION: f32 = 0.2;
 
 pub struct TileState {
     pub tiles: Vec<Vec<Rc<RefCell<Tile>>>>,
@@ -245,6 +247,48 @@ impl TileState {
             self.swap_ref_tiles(self.blank_cell, tile2, 0.15)
         }
     }
+
+    pub fn handle_key_event(
+        &mut self,
+        _ctx: &mut Context,
+        keycode: event::KeyCode,
+        _keymods: event::KeyMods,
+        repeat: bool,
+    ) {
+        let i = self.blank_cell.0;
+        let j = self.blank_cell.1;
+        if !repeat && !self.game_completed() {
+            // TODO make this DRYer
+            match keycode {
+                event::KeyCode::Up => {
+                    // Tile below space
+                    if i + 1 < self.ref_board.len() {
+                        self.swap_ref_tiles((i, j), (i + 1, j), TILE_SLIDE_DURATION);
+                    }
+                }
+                event::KeyCode::Down => {
+                    // Tile above space
+                    if i != 0 {
+                        self.swap_ref_tiles((i, j), (i - 1, j), TILE_SLIDE_DURATION);
+                    }
+                }
+                event::KeyCode::Left => {
+                    // Tile left of space
+                    if j + 1 < self.ref_board[i].len() {
+                        self.swap_ref_tiles((i, j), (i, j + 1), TILE_SLIDE_DURATION);
+                    }
+                }
+                event::KeyCode::Right => {
+                    // Tile right of space
+                    if j != 0 {
+                        self.swap_ref_tiles((i, j), (i, j - 1), TILE_SLIDE_DURATION);
+                    }
+                }
+                _ => {}
+            }
+            self.check_completed();
+        }
+    }
 }
 
 impl Drawable for TileState {
@@ -275,7 +319,7 @@ impl Drawable for TileState {
                         let tile = &self.tiles[i][j];
                         let mut tile_update = tile.as_ref().borrow_mut();
                         let side_len = tile_update.side_len;
-                        tile_update.to_pos(TilePosition::from_ij(i, j, side_len), 1.8);
+                        tile_update.to_pos(TilePosition::from_ij(i, j, side_len), 3.0);
                         self.outwards_animated_tiles += 1;
                         &self.tiles[i][j]
                     } else if self.outwards_animated_tiles == total_tiles && !self.swapping_tiles {
