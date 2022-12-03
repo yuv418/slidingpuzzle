@@ -12,15 +12,29 @@ use crate::game::drawable::Drawable;
 
 use super::{Tile, TilePosition};
 
+const TOTAL_SCRAMBLE_SWAPS: u32 = 50;
+
 pub struct TileState {
     pub tiles: Vec<Vec<Rc<RefCell<Tile>>>>,
     pub ref_board: Vec<Vec<Option<Rc<RefCell<Tile>>>>>,
     // For efficiency purposes
     pub blank_cell: (usize, usize),
     pub tile_blank_cell: (usize, usize),
+    // For the initial outwards animation and shuffling
+    outwards_animated_tiles: usize,
+    total_tiles_swapped: u32,
+    game_started: bool,
+
     // For when the game is finished
     inwards_animated_tiles: usize,
     game_completed: bool,
+
+    current_animation: Option<(usize, usize)>,
+    // Previous from redoing the previous swap
+    previous_swap: Option<(usize, usize)>,
+
+    swapping_tiles: bool,
+
     pub x: f32,
     pub y: f32,
 }
@@ -46,8 +60,14 @@ impl TileState {
             ref_board: vec![vec![None; col_cnt_tiles as usize]; row_cnt_tiles as usize],
             blank_cell: (0, 0),
             tile_blank_cell: (0, 0),
+            game_started: false,
+            outwards_animated_tiles: 0,
+            total_tiles_swapped: 0,
             inwards_animated_tiles: 0,
+            swapping_tiles: false,
             game_completed: false,
+            current_animation: None,
+            previous_swap: None,
             x,
             y,
         };
@@ -78,7 +98,7 @@ impl TileState {
                         tile_size as u16,
                         &row_buf_pix,
                     )?,
-                    pos: TilePosition::from_ij(i as usize, j as usize, tile_size),
+                    pos: TilePosition::from_ij_no_gap(i as usize - 1, j as usize - 1, tile_size),
                     animation: None,
                 };
                 tile_row.push(Rc::new(RefCell::new(tile_to_insert)));
@@ -95,87 +115,12 @@ impl TileState {
         }
 
         let mut rng = rand::thread_rng();
-
         // Remove one random tile from ref board.
         let i = rng.gen_range(0..row_cnt_tiles) as usize;
         let j = rng.gen_range(0..col_cnt_tiles) as usize;
         tile_state.ref_board[i][j] = None;
         tile_state.tile_blank_cell = (i, j);
         tile_state.blank_cell = (i, j);
-
-        // Scramble the tiles in tile_state.ref_board
-        for _ in 1..400 {
-            // This is so low effort
-            // Better method: start with gap at 0,0 and swap the gap with random adjacents over and over
-            let tile1 = (
-                rng.gen_range(0..row_cnt_tiles) as usize,
-                rng.gen_range(0..col_cnt_tiles) as usize,
-            );
-            // Choose a random adjacent tile
-            let replacetile = if tile_state.blank_cell == (0, 0) {
-                rng.gen_range(0..2) as usize
-            } else if tile_state.blank_cell == (0, col_cnt_tiles as usize - 1) {
-                let r = rng.gen_range(0..2);
-                (if r == 1 { 2 } else { r } as usize)
-            } else if tile_state.blank_cell
-                == (row_cnt_tiles as usize - 1, col_cnt_tiles as usize - 1)
-            {
-                let r = rng.gen_range(0..2);
-                (if r == 0 { 3 } else { 2 } as usize)
-            } else if tile_state.blank_cell == (row_cnt_tiles as usize - 1, 0) {
-                let r = rng.gen_range(0..2);
-                (if r == 0 { 3 } else { r } as usize)
-            }
-            // Left edge
-            else if tile_state.blank_cell.1 == 0 {
-                let r = rng.gen_range(0..3);
-                (if r == 2 { 3 } else { r } as usize)
-            }
-            // Top edge
-            else if tile_state.blank_cell.0 == 0 {
-                rng.gen_range(0..3)
-            }
-            // Right edge
-            else if tile_state.blank_cell.1 == col_cnt_tiles as usize - 1 {
-                let r = rng.gen_range(0..3);
-                (if r == 1 { 3 } else { r } as usize)
-            }
-            // Bottom edge
-            else if tile_state.blank_cell.0 == row_cnt_tiles as usize - 1 {
-                rng.gen_range(0..3) + 1
-            } else {
-                rng.gen_range(0..4) as usize
-            };
-
-            let (c1, c2) = tile_state.blank_cell;
-
-            println!("swap {:?} {:?}", tile_state.blank_cell, replacetile);
-            let tile2 = match replacetile {
-                0 => {
-                    // Down
-                    (c1 + 1, c2)
-                }
-                1 => {
-                    // Right
-                    (c1, c2 + 1)
-                }
-                2 => {
-                    // Left
-                    (c1, c2 - 1)
-                }
-                3 => {
-                    // Up
-                    (c1 - 1, c2)
-                }
-                _ => panic!("Should never happen"),
-            };
-
-            tile_state.swap_ref_tiles(tile_state.blank_cell, tile2, 0.0)
-        }
-        // Fix the missing tile
-        let (m_x, m_y) = tile_state.tile_blank_cell;
-        tile_state.tiles[m_x][m_y].as_ref().borrow_mut().pos =
-            TilePosition::from_ij(m_x, m_y, tile_size);
 
         Ok(tile_state)
     }
@@ -202,6 +147,8 @@ impl TileState {
 
         let new_pos = TilePosition::from_ij(i1, j1, tile_update.side_len);
         tile_update.to_pos(new_pos, duration);
+
+        self.current_animation = Some((i1, j1));
     }
 
     pub fn check_completed(&mut self) {
@@ -221,15 +168,152 @@ impl TileState {
     pub fn game_completed(&self) -> bool {
         self.game_completed
     }
+
+    pub fn swap_random_tile_blank(&mut self) {
+        // This is so low effort
+        // Better method: start with gap at 0,0 and swap the gap with random adjacents over and over
+        let mut rng = rand::thread_rng();
+        let col_cnt_tiles = self.tiles.len();
+        let row_cnt_tiles = self.tiles[0].len();
+        let tile1 = (
+            rng.gen_range(0..row_cnt_tiles) as usize,
+            rng.gen_range(0..col_cnt_tiles) as usize,
+        );
+        // Choose a random adjacent tile
+        let replacetile = if self.blank_cell == (0, 0) {
+            rng.gen_range(0..2) as usize
+        } else if self.blank_cell == (0, col_cnt_tiles as usize - 1) {
+            let r = rng.gen_range(0..2);
+            (if r == 1 { 2 } else { r } as usize)
+        } else if self.blank_cell == (row_cnt_tiles as usize - 1, col_cnt_tiles as usize - 1) {
+            let r = rng.gen_range(0..2);
+            (if r == 0 { 3 } else { 2 } as usize)
+        } else if self.blank_cell == (row_cnt_tiles as usize - 1, 0) {
+            let r = rng.gen_range(0..2);
+            (if r == 0 { 3 } else { r } as usize)
+        }
+        // Left edge
+        else if self.blank_cell.1 == 0 {
+            let r = rng.gen_range(0..3);
+            (if r == 2 { 3 } else { r } as usize)
+        }
+        // Top edge
+        else if self.blank_cell.0 == 0 {
+            rng.gen_range(0..3)
+        }
+        // Right edge
+        else if self.blank_cell.1 == col_cnt_tiles as usize - 1 {
+            let r = rng.gen_range(0..3);
+            (if r == 1 { 3 } else { r } as usize)
+        }
+        // Bottom edge
+        else if self.blank_cell.0 == row_cnt_tiles as usize - 1 {
+            rng.gen_range(0..3) + 1
+        } else {
+            rng.gen_range(0..4) as usize
+        };
+
+        let (c1, c2) = self.blank_cell;
+
+        println!("swap {:?} {:?}", self.blank_cell, replacetile);
+        let tile2 = match replacetile {
+            0 => {
+                // Down
+                (c1 + 1, c2)
+            }
+            1 => {
+                // Right
+                (c1, c2 + 1)
+            }
+            2 => {
+                // Left
+                (c1, c2 - 1)
+            }
+            3 => {
+                // Up
+                (c1 - 1, c2)
+            }
+            _ => panic!("Should never happen"),
+        };
+
+        // Redo the method if the tile2 was the previous swap
+        if Some(tile2) == self.previous_swap {
+            self.swap_random_tile_blank();
+            return;
+        } else {
+            self.previous_swap = Some(self.blank_cell);
+            self.swap_ref_tiles(self.blank_cell, tile2, 0.15)
+        }
+    }
 }
 
 impl Drawable for TileState {
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         // draw all tiles with a 10px gap between each title
+
+        if let Some(current_animation) = self.current_animation {
+            let (a_x, a_y) = current_animation;
+            if self.ref_board[a_x][a_y]
+                .as_ref()
+                .unwrap()
+                .as_ref()
+                .borrow()
+                .animation
+                .is_none()
+            {
+                self.current_animation = None;
+            }
+        }
+
+        let total_tiles = self.ref_board.len() * self.ref_board[0].len();
+
         for i in 0..self.ref_board.len() {
             // each tile in the row, so x
             for j in 0..self.ref_board[i].len() {
-                let mut tile = if !self.game_completed() {
+                let mut tile = if !self.game_started {
+                    if self.outwards_animated_tiles < total_tiles {
+                        let tile = &self.tiles[i][j];
+                        let mut tile_update = tile.as_ref().borrow_mut();
+                        let side_len = tile_update.side_len;
+                        tile_update.to_pos(TilePosition::from_ij(i, j, side_len), 1.8);
+                        self.outwards_animated_tiles += 1;
+                        &self.tiles[i][j]
+                    } else if self.outwards_animated_tiles == total_tiles && !self.swapping_tiles {
+                        self.swapping_tiles = true;
+                        // This seems rather inefficient
+                        for tile_row in &self.tiles {
+                            for tile in tile_row {
+                                if tile.borrow().animation.is_some() {
+                                    self.swapping_tiles = false;
+                                }
+                            }
+                        }
+                        &self.tiles[i][j]
+                    } else if self.swapping_tiles {
+                        // Slide a random tile
+                        if self.total_tiles_swapped < TOTAL_SCRAMBLE_SWAPS
+                            && self.current_animation.is_none()
+                        {
+                            self.swap_random_tile_blank();
+                            self.total_tiles_swapped += 1;
+                        } else if self.total_tiles_swapped == TOTAL_SCRAMBLE_SWAPS {
+                            // Fix the missing tile
+                            let tile = &self.tiles[i][j];
+                            let tile_update = tile.as_ref().borrow_mut();
+                            let (m_x, m_y) = self.tile_blank_cell;
+                            self.tiles[m_x][m_y].as_ref().borrow_mut().pos =
+                                TilePosition::from_ij(m_x, m_y, tile_update.side_len);
+                            self.game_started = true;
+                        }
+                        if let Some(tile) = &self.ref_board[i][j] {
+                            tile
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        panic!("Never happens")
+                    }
+                } else if !self.game_completed() {
                     if let Some(tile) = &self.ref_board[i][j] {
                         tile
                     } else {
@@ -237,7 +321,6 @@ impl Drawable for TileState {
                     }
                 } else {
                     let tile = &self.tiles[i][j];
-                    let total_tiles = self.ref_board.len() * self.ref_board[0].len();
 
                     if self.inwards_animated_tiles < total_tiles {
                         let mut tile_update = tile.as_ref().borrow_mut();
