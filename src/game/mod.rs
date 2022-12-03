@@ -38,7 +38,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
     ) {
         let i = self.tile_state.blank_cell.0;
         let j = self.tile_state.blank_cell.1;
-        if !repeat && !self.tile_state.drawing_animation && !self.tile_state.game_completed() {
+        if !repeat && !self.tile_state.game_completed() {
             // TODO make this DRYer
             match keycode {
                 event::KeyCode::Up => {

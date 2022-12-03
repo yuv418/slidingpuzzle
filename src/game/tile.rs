@@ -43,6 +43,14 @@ impl TilePosition {
             y: TILE_PADDING_Y + (i as f32 * (tile_size as f32 + TILE_GAP)),
         }
     }
+
+    // For when the game is completed
+    pub fn from_ij_no_gap(i: usize, j: usize, tile_size: u32) -> Self {
+        TilePosition {
+            x: TILE_GAP + TILE_PADDING_X + (j as f32 * (tile_size as f32)),
+            y: TILE_GAP + TILE_PADDING_Y + (i as f32 * (tile_size as f32)),
+        }
+    }
 }
 
 impl Tile {
@@ -78,7 +86,8 @@ pub struct TileState {
     // For efficiency purposes
     pub blank_cell: (usize, usize),
     pub tile_blank_cell: (usize, usize),
-    pub drawing_animation: bool,
+    // For when the game is finished
+    inwards_animated_tiles: usize,
     game_completed: bool,
     pub x: f32,
     pub y: f32,
@@ -105,7 +114,7 @@ impl TileState {
             ref_board: vec![vec![None; col_cnt_tiles as usize]; row_cnt_tiles as usize],
             blank_cell: (0, 0),
             tile_blank_cell: (0, 0),
-            drawing_animation: false,
+            inwards_animated_tiles: 0,
             game_completed: false,
             x,
             y,
@@ -301,7 +310,21 @@ impl Drawable for TileState {
                         continue;
                     }
                 } else {
-                    &self.tiles[i][j]
+                    let tile = &self.tiles[i][j];
+                    let total_tiles = self.ref_board.len() * self.ref_board[0].len();
+
+                    if self.inwards_animated_tiles < total_tiles {
+                        let mut tile_update = tile.as_ref().borrow_mut();
+                        let new_pos = TilePosition::from_ij_no_gap(i, j, tile_update.side_len);
+                        // Keyframe all the tiles.
+                        tile_update.animation = Some(keyframes![
+                            (tile_update.pos.clone(), 0.0, EaseInOut),
+                            (new_pos.clone(), 1.8, EaseInOut)
+                        ]);
+                        tile_update.pos = new_pos;
+                        self.inwards_animated_tiles += 1;
+                    }
+                    tile
                 }
                 .as_ref()
                 .borrow_mut();
