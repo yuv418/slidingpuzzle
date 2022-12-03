@@ -1,84 +1,16 @@
-use image::io::Reader as ImageReader;
-use image::GenericImageView;
-use image::Pixel;
-use keyframe::functions::EaseInOut;
-use keyframe::keyframes;
-use keyframe::AnimationSequence;
-use keyframe_derive::CanTween;
+use image::{io::Reader as ImageReader, GenericImageView, Pixel};
+use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 use rand::Rng;
-use std::borrow::BorrowMut;
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use ggez::{
     graphics::{self, Image},
     Context, GameResult,
 };
-use glam::Vec2;
 
 use crate::game::drawable::Drawable;
 
-const TILE_GAP: f32 = 20.0;
-
-const TILE_PADDING_X: f32 = 90.0;
-const TILE_PADDING_Y: f32 = 150.0;
-
-pub struct Tile {
-    // The size of a square tile (one side) in px
-    pub side_len: u32,
-    pub image_buf: Image,
-    pub pos: TilePosition,
-    pub animation: Option<AnimationSequence<TilePosition>>,
-}
-
-#[derive(CanTween, Debug, Clone, Copy, Default)]
-pub struct TilePosition {
-    pub x: f32,
-    pub y: f32,
-}
-
-impl TilePosition {
-    pub fn from_ij(i: usize, j: usize, tile_size: u32) -> Self {
-        TilePosition {
-            x: TILE_PADDING_X + (j as f32 * (tile_size as f32 + TILE_GAP)),
-            y: TILE_PADDING_Y + (i as f32 * (tile_size as f32 + TILE_GAP)),
-        }
-    }
-
-    // For when the game is completed
-    pub fn from_ij_no_gap(i: usize, j: usize, tile_size: u32) -> Self {
-        TilePosition {
-            x: TILE_GAP + TILE_PADDING_X + (j as f32 * (tile_size as f32)),
-            y: TILE_GAP + TILE_PADDING_Y + (i as f32 * (tile_size as f32)),
-        }
-    }
-}
-
-impl Tile {
-    pub fn adjacent((i1, j1): (usize, usize), (i2, j2): (usize, usize)) -> bool {
-        let (i1, j1) = (i1 as i32, j1 as i32);
-        let (i2, j2) = (i2 as i32, j2 as i32);
-        if ((i1 - i2).abs() == 1 && (j1 - j2) == 0) || ((i1 - i2) == 0 && (j1 - j2).abs() == 1) {
-            true
-        } else {
-            false
-        }
-    }
-}
-impl Drawable for Tile {
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        if let Some(seq) = &mut self.animation {
-            seq.advance_by(0.05);
-            let anim_pos = seq.now();
-            graphics::draw(ctx, &self.image_buf, (Vec2::new(anim_pos.x, anim_pos.y),))?;
-            if seq.finished() {
-                self.animation = None;
-            }
-        } else {
-            graphics::draw(ctx, &self.image_buf, (Vec2::new(self.pos.x, self.pos.y),))?;
-        }
-        Ok(())
-    }
-}
+use super::{Tile, TilePosition};
 
 pub struct TileState {
     pub tiles: Vec<Vec<Rc<RefCell<Tile>>>>,
@@ -238,7 +170,7 @@ impl TileState {
                 _ => panic!("Should never happen"),
             };
 
-            tile_state.swap_ref_tiles(tile_state.blank_cell, tile2, false)
+            tile_state.swap_ref_tiles(tile_state.blank_cell, tile2, 0.0)
         }
         // Fix the missing tile
         let (m_x, m_y) = tile_state.tile_blank_cell;
@@ -251,7 +183,7 @@ impl TileState {
         &mut self,
         (i1, j1): (usize, usize),
         (i2, j2): (usize, usize),
-        animate: bool,
+        duration: f32,
     ) {
         {
             let old_tile = self.ref_board[i1][j1].clone();
@@ -269,13 +201,7 @@ impl TileState {
             .borrow_mut();
 
         let new_pos = TilePosition::from_ij(i1, j1, tile_update.side_len);
-        if animate {
-            tile_update.animation = Some(keyframes![
-                (tile_update.pos.clone(), 0.0, EaseInOut),
-                (new_pos.clone(), 0.2, EaseInOut)
-            ]);
-        }
-        tile_update.pos = new_pos;
+        tile_update.to_pos(new_pos, duration);
     }
 
     pub fn check_completed(&mut self) {
@@ -315,13 +241,8 @@ impl Drawable for TileState {
 
                     if self.inwards_animated_tiles < total_tiles {
                         let mut tile_update = tile.as_ref().borrow_mut();
-                        let new_pos = TilePosition::from_ij_no_gap(i, j, tile_update.side_len);
-                        // Keyframe all the tiles.
-                        tile_update.animation = Some(keyframes![
-                            (tile_update.pos.clone(), 0.0, EaseInOut),
-                            (new_pos.clone(), 1.8, EaseInOut)
-                        ]);
-                        tile_update.pos = new_pos;
+                        let side_len = tile_update.side_len;
+                        tile_update.to_pos(TilePosition::from_ij_no_gap(i, j, side_len), 1.8);
                         self.inwards_animated_tiles += 1;
                     }
                     tile

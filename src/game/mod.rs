@@ -10,19 +10,20 @@ use std::rc::Rc;
 use self::drawable::Drawable;
 
 pub mod drawable;
-pub mod tile;
+pub mod tiles;
+
+const TILE_SLIDE_DURATION: f32 = 0.2;
 
 pub struct GameState {
-    pub tile_state: tile::TileState,
+    pub tile_state: tiles::TileState,
     pub set_winsize: bool,
 }
 
 impl GameState {
     pub fn new(img_path: PathBuf, tile_size: u32, context: &mut Context) -> GameResult<Self> {
         // Loop through and make the tiles
-        let mut tile_state = tile::TileState::new(context, img_path, tile_size, 0.0, 0.0)?;
         Ok(Self {
-            tile_state,
+            tile_state: tiles::TileState::new(context, img_path, tile_size, 0.0, 0.0)?,
             set_winsize: false,
         })
     }
@@ -44,25 +45,29 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 event::KeyCode::Up => {
                     // Tile below space
                     if i + 1 < self.tile_state.ref_board.len() {
-                        self.tile_state.swap_ref_tiles((i, j), (i + 1, j), true);
+                        self.tile_state
+                            .swap_ref_tiles((i, j), (i + 1, j), TILE_SLIDE_DURATION);
                     }
                 }
                 event::KeyCode::Down => {
                     // Tile above space
                     if i != 0 {
-                        self.tile_state.swap_ref_tiles((i, j), (i - 1, j), true);
+                        self.tile_state
+                            .swap_ref_tiles((i, j), (i - 1, j), TILE_SLIDE_DURATION);
                     }
                 }
                 event::KeyCode::Left => {
                     // Tile left of space
                     if j + 1 < self.tile_state.ref_board[i].len() {
-                        self.tile_state.swap_ref_tiles((i, j), (i, j + 1), true);
+                        self.tile_state
+                            .swap_ref_tiles((i, j), (i, j + 1), TILE_SLIDE_DURATION);
                     }
                 }
                 event::KeyCode::Right => {
                     // Tile right of space
                     if j != 0 {
-                        self.tile_state.swap_ref_tiles((i, j), (i, j - 1), true);
+                        self.tile_state
+                            .swap_ref_tiles((i, j), (i, j - 1), TILE_SLIDE_DURATION);
                     }
                 }
                 _ => {}
