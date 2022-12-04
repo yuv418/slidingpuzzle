@@ -25,6 +25,11 @@ pub fn main() -> GameResult {
     }
     let (mut ctx, event_loop) = cb.build()?;
 
+    ctx.gfx.add_font(
+        "SecularOne-Regular",
+        graphics::FontData::from_path(&ctx, "/fonts/SecularOne-Regular.ttf")?,
+    );
+
     let state = game::GameState::new(&mut ctx)?;
 
     /*
@@ -42,10 +47,6 @@ pub fn main() -> GameResult {
     //
     // copied straight from https://github.com/ggez/ggez/blob/master/examples/files.rs
 
-    ctx.gfx.add_font(
-        "SecularOne-Regular",
-        graphics::FontData::from_path(&ctx, "/fonts/SecularOne-Regular.ttf")?,
-    );
     // Save file
     let player = player::Player::load(&mut ctx);
     if let Err(_) = player {

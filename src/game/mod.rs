@@ -32,7 +32,7 @@ impl GameState {
     pub fn new(context: &mut Context) -> GameResult<Self> {
         // Loop through and make the tiles
         Ok(Self {
-            current_scene: Box::new(gmenu::GameMenu::new(context)),
+            current_scene: Box::new(gmenu::GameMenu::new(context)?),
             prev_scene: None,
             set_winsize: false,
             scene_transition: None,

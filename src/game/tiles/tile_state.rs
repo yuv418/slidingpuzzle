@@ -1,6 +1,6 @@
 use image::{io::Reader as ImageReader, GenericImageView, Pixel};
 use rand::Rng;
-use std::{cell::RefCell, io::BufReader, path::PathBuf, rc::Rc};
+use std::{cell::RefCell, io::BufReader, rc::Rc};
 
 use ggez::{
     graphics::{Canvas, Image, ImageFormat},
@@ -293,11 +293,12 @@ impl Scene for TileState {
                     _ => {}
                 }
             }
+            // TODO move this to the update method
             self.check_completed();
         }
     }
 
-    fn next_scene(&self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
+    fn next_scene(&self, _ctx: &mut Context) -> Option<Box<dyn Scene>> {
         if self.game_completed() {
             // Update player completed puzzles,
             // point value?
