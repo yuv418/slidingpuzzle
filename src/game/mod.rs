@@ -1,3 +1,4 @@
+use self::player::Player;
 use self::scene::Scene;
 use ggez::event;
 use ggez::glam::Vec2;

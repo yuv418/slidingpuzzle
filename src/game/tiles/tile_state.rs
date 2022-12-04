@@ -9,7 +9,7 @@ use ggez::{
     Context, GameResult,
 };
 
-use crate::game::{drawable::Drawable, scene::Scene};
+use crate::game::{drawable::Drawable, player::Player, scene::Scene};
 
 use super::{Tile, TilePosition};
 

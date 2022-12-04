@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use game::player;
+use game::player::{Player, PLAYER};
 use ggez::{event, graphics, GameResult};
 
 mod game;
@@ -30,8 +30,6 @@ pub fn main() -> GameResult {
         graphics::FontData::from_path(&ctx, "/fonts/SecularOne-Regular.ttf")?,
     );
 
-    let state = game::GameState::new(&mut ctx)?;
-
     /*
              180 px top padding
       60 + [        width        ] + 60
@@ -47,15 +45,24 @@ pub fn main() -> GameResult {
     //
     // copied straight from https://github.com/ggez/ggez/blob/master/examples/files.rs
 
-    // Save file
-    let player = player::Player::load(&mut ctx);
-    if let Err(_) = player {
-        // TODO scene for inputting player name
-        let p = player::Player::new("test".to_string());
-        p.save(&mut ctx)?;
-    } else if let Ok(player) = player {
-        println!("{:?}", player);
+    // Drop the mutex by putting it in its own scope
+    {
+        let mut opt_player = PLAYER.lock().unwrap();
+        let loaded_player = Player::load(&mut ctx);
+
+        *opt_player = Some(match loaded_player {
+            Err(_) => {
+                let p = Player::new("test".to_string());
+                p.save(&mut ctx)?;
+                p
+            }
+            Ok(p) => {
+                println!("{:?}", p);
+                p
+            }
+        });
     }
+    let state = game::GameState::new(&mut ctx)?;
 
     // ctx.gfx.set_screen_coordinates(&mut ctx, Rect::new(0.0, 0.0, win_width, win_height))?
 

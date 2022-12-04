@@ -1,8 +1,15 @@
-use std::collections::BinaryHeap;
+use std::{collections::BinaryHeap, sync::Mutex};
 
 use ggez::{Context, GameResult};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use lazy_static::lazy_static;
+
+// TODO use a parking lot Mutex
+lazy_static! {
+    pub static ref PLAYER: Mutex<Option<Player>> = Mutex::new(None);
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PlayerSettings {

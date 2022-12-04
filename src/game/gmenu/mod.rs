@@ -1,7 +1,9 @@
+use crate::game::player::PLAYER;
+
 use self::menu_mapping::GameMenuItem;
 
 use super::drawable::Drawable as SlidingPuzzleDrawable;
-use super::player;
+use super::player::{self, Player};
 use super::scene::Scene;
 use super::tiles::TileState;
 use ggez::graphics::Canvas;
@@ -26,10 +28,11 @@ pub fn next_page(_ctx: &mut Context) -> Box<dyn Scene> {
     println!("Going to next page");
     unimplemented!()
 }
-
 pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
-    // Is it really efficient to load the player randomly here?
-    let player = player::Player::load(context).expect("Failed to load player");
+    let opt_player = PLAYER.lock().unwrap();
+    // Player guaranteed to be some at this point
+    let player = opt_player.as_ref().unwrap();
+
     let tile_state = Box::new(
         TileState::new(
             context,
