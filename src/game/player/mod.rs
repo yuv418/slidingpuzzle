@@ -1,5 +1,10 @@
-use std::{collections::BinaryHeap, sync::Mutex};
+use std::{
+    collections::{BTreeMap, BinaryHeap},
+    sync::Mutex,
+    time::Duration,
+};
 
+use chrono::{DateTime, Local};
 use ggez::{Context, GameResult};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -17,10 +22,17 @@ pub struct PlayerSettings {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct PuzzleStatistics {
+    pub finish_time: DateTime<Local>,
+    pub duration: Duration,
+    pub move_count: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Player {
     id: Uuid,
     username: String,
-    pub completed_puzzles: BinaryHeap<usize>,
+    pub completed_puzzles: BTreeMap<usize, Vec<PuzzleStatistics>>,
     pub player_settings: PlayerSettings,
 }
 
@@ -39,7 +51,7 @@ impl Player {
         Self {
             id: Uuid::new_v4(),
             username,
-            completed_puzzles: BinaryHeap::new(),
+            completed_puzzles: BTreeMap::new(),
             player_settings: PlayerSettings { num_rows_cols: 3 },
         }
     }

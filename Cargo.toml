@@ -19,3 +19,5 @@ lazy_static = "1"
 
 keyframe = "1"
 keyframe_derive = "1"
+
+chrono = { version = "0.4", features = [ "default", "serde" ] }

@@ -1,3 +1,4 @@
+use chrono::Local;
 use image::{imageops::FilterType, io::Reader as ImageReader, GenericImageView, Pixel};
 use rand::Rng;
 use std::{cell::RefCell, io::BufReader, rc::Rc};
@@ -5,11 +6,17 @@ use std::{cell::RefCell, io::BufReader, rc::Rc};
 use ggez::{
     graphics::{Canvas, Image, ImageFormat},
     input::keyboard::KeyInput,
+    timer::TimeContext,
     winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 
-use crate::game::{drawable::Drawable, player::Player, scene::Scene};
+use crate::game::{
+    drawable::Drawable,
+    gmenu::puzzle_listing::PuzzleListing,
+    player::{Player, PuzzleStatistics, PLAYER},
+    scene::Scene,
+};
 
 use super::{Tile, TilePosition};
 
@@ -38,6 +45,8 @@ pub struct TileState {
     swapping_tiles: bool,
 
     img_num: usize,
+    total_moves: u32,
+    timer: Option<TimeContext>,
 
     pub x: f32,
     pub y: f32,
@@ -75,6 +84,8 @@ impl TileState {
             current_animation: None,
             previous_swap: None,
             img_num,
+            total_moves: 0,
+            timer: None,
             x: 0.0,
             y: 0.0,
         };
@@ -148,6 +159,8 @@ impl TileState {
                     .resizable(true),
             )
             .expect("Failed to resize window for tile game");
+
+        tile_state.timer = Some(TimeContext::new());
 
         Ok(tile_state)
     }
@@ -281,24 +294,28 @@ impl Scene for TileState {
                         // Tile below space
                         if i + 1 < self.ref_board.len() {
                             self.swap_ref_tiles((i, j), (i + 1, j), TILE_SLIDE_DURATION);
+                            self.total_moves += 1;
                         }
                     }
                     VirtualKeyCode::Down => {
                         // Tile above space
                         if i != 0 {
                             self.swap_ref_tiles((i, j), (i - 1, j), TILE_SLIDE_DURATION);
+                            self.total_moves += 1;
                         }
                     }
                     VirtualKeyCode::Left => {
                         // Tile left of space
                         if j + 1 < self.ref_board[i].len() {
                             self.swap_ref_tiles((i, j), (i, j + 1), TILE_SLIDE_DURATION);
+                            self.total_moves += 1;
                         }
                     }
                     VirtualKeyCode::Right => {
                         // Tile right of space
                         if j != 0 {
                             self.swap_ref_tiles((i, j), (i, j - 1), TILE_SLIDE_DURATION);
+                            self.total_moves += 1;
                         }
                     }
                     _ => {}
@@ -309,11 +326,35 @@ impl Scene for TileState {
         }
     }
 
-    fn next_scene(&mut self, _ctx: &mut Context) -> Option<Box<dyn Scene>> {
-        if self.game_completed() {
+    fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
+        if self.game_completed() && self.current_animation.is_none() {
             // Update player completed puzzles,
             // point value?
-            None
+
+            {
+                let mut opt_player = PLAYER.lock().unwrap();
+                let player = opt_player.as_mut().unwrap();
+
+                let game_stat = PuzzleStatistics {
+                    finish_time: Local::now(),
+                    duration: self.timer.as_ref().unwrap().time_since_start(),
+                    move_count: self.total_moves,
+                };
+
+                if let Some(statistics) = player.completed_puzzles.get_mut(&self.img_num) {
+                    statistics.push(game_stat);
+                } else {
+                    player
+                        .completed_puzzles
+                        .insert(self.img_num, vec![game_stat]);
+                }
+                player.save(ctx).expect("Failed to save player statistics");
+            }
+
+            Some(Box::new(
+                PuzzleListing::new(ctx, 4 * (self.img_num % 4))
+                    .expect("Failed to return to puzzle listing"),
+            ))
         } else {
             None
         }

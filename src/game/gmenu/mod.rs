@@ -37,11 +37,17 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
     let tile_state = Box::new(
         TileState::new(
             context,
-            if let Some(max_pzl) = player.completed_puzzles.peek() {
+            if !player.completed_puzzles.is_empty() {
                 // We'll have to add some kind of check to make sure
                 // that the player hasn't actually completed the entire game,
                 // otherwise this would cause problems.
-                max_pzl + 1
+                player
+                    .completed_puzzles
+                    .iter()
+                    .next_back()
+                    .expect("Failed to get max completed puzzle")
+                    .0
+                    + 1
             } else {
                 0
             },
