@@ -57,8 +57,8 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 self.prev_scene = Some(std::mem::replace(&mut self.current_scene, next_scene));
                 self.scene_transition = Some(keyframes![
                     (0.0, 0.0, EaseInOut),
-                    (ctx.gfx.drawable_size().1, 0.3, EaseInOut),
-                    (0.0, 0.6, EaseInOut)
+                    (ctx.gfx.drawable_size().1, 0.2, EaseInOut),
+                    (0.0, 0.4, EaseInOut)
                 ]);
             }
         }

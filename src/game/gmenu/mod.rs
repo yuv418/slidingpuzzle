@@ -46,25 +46,10 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
                 0
             },
             player.player_settings.num_rows_cols,
-            0.0,
-            0.0,
         )
         .expect("Failed to create TileState"),
     );
 
-    let tile_gap = tile_state.tiles[0][0].borrow().side_len + 10; // determine the gap here
-    let win_width = (180 + (tile_state.tiles[0].len() as u32 * tile_gap)) as f32;
-    let win_height = (300 + (tile_gap * tile_state.tiles.len() as u32)) as f32;
-    println!("the new window dimensions are {}x{}", win_width, win_height);
-    // This should happen in TileState::new, not here.
-    context
-        .gfx
-        .set_mode(
-            ggez::conf::WindowMode::default()
-                .dimensions(win_width, win_height)
-                .resizable(true),
-        )
-        .expect("Failed to resize window for tile game");
     tile_state
 }
 

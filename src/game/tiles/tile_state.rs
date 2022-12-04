@@ -1,4 +1,4 @@
-use image::{io::Reader as ImageReader, GenericImageView, Pixel};
+use image::{imageops::FilterType, io::Reader as ImageReader, GenericImageView, Pixel};
 use rand::Rng;
 use std::{cell::RefCell, io::BufReader, rc::Rc};
 
@@ -44,19 +44,16 @@ pub struct TileState {
 }
 
 impl TileState {
-    pub fn new(
-        context: &mut Context,
-        img_num: usize,
-        num_rows_cols: usize,
-        x: f32,
-        y: f32,
-    ) -> GameResult<Self> {
+    pub fn new(context: &mut Context, img_num: usize, num_rows_cols: usize) -> GameResult<Self> {
         let mut img = ImageReader::new(BufReader::new(
             context.fs.open(format!("/images/{}.jpg", img_num))?,
         ));
         img.set_format(image::ImageFormat::Jpeg);
 
-        let img = img.decode().expect("failed to open image");
+        let img =
+            img.decode()
+                .expect("failed to open image")
+                .resize(600, 600, FilterType::Lanczos3);
 
         // How many tiles in a row? In a column?
         let col_cnt_tiles = num_rows_cols; // img.width() / tile_size;
@@ -78,8 +75,8 @@ impl TileState {
             current_animation: None,
             previous_swap: None,
             img_num,
-            x,
-            y,
+            x: 0.0,
+            y: 0.0,
         };
 
         // Go through each row of tiles, looping through each tile in the row
@@ -137,6 +134,20 @@ impl TileState {
         tile_state.ref_board[i][j] = None;
         tile_state.tile_blank_cell = (i, j);
         tile_state.blank_cell = (i, j);
+
+        let tile_gap = tile_state.tiles[0][0].borrow().side_len + 10; // determine the gap here
+        let win_width = (180 + (tile_state.tiles[0].len() as u32 * tile_gap)) as f32;
+        let win_height = (300 + (tile_gap * tile_state.tiles.len() as u32)) as f32;
+        println!("the new window dimensions are {}x{}", win_width, win_height);
+        // This should happen in TileState::new, not here.
+        context
+            .gfx
+            .set_mode(
+                ggez::conf::WindowMode::default()
+                    .dimensions(win_width, win_height)
+                    .resizable(true),
+            )
+            .expect("Failed to resize window for tile game");
 
         Ok(tile_state)
     }

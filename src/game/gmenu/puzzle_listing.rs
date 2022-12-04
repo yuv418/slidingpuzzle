@@ -4,7 +4,7 @@ use ggez::{
     Context, GameResult,
 };
 
-use crate::game::{drawable::Drawable, scene::Scene};
+use crate::game::{drawable::Drawable, player::PLAYER, scene::Scene, tiles::TileState};
 
 use super::{menu_item::GameMenuItem, GameMenu};
 
@@ -22,6 +22,7 @@ pub struct PuzzleListing {
     title_mesh: Text,
     page_direction: Option<PaginationDirection>,
     back: bool,
+    start_game: bool,
 }
 
 impl PuzzleListing {
@@ -66,6 +67,7 @@ impl PuzzleListing {
             menu_items,
             page_direction: None,
             back: false,
+            start_game: false,
         })
     }
 }
@@ -135,6 +137,9 @@ impl Scene for PuzzleListing {
                 VirtualKeyCode::Escape => {
                     self.back = true;
                 }
+                VirtualKeyCode::Return => {
+                    self.start_game = true;
+                }
                 _ => {}
             }
             if old_selected != self.currently_selected {
@@ -154,6 +159,19 @@ impl Scene for PuzzleListing {
         if self.back {
             return Some(Box::new(
                 GameMenu::new(ctx).expect("Failed to launch game menu"),
+            ));
+        } else if self.start_game {
+            let opt_player = PLAYER.lock().unwrap();
+            // Player guaranteed to be some at this point
+            let player = opt_player.as_ref().unwrap();
+
+            let game_image_num =
+                self.listing_start + (self.currently_selected.0 * 2) + self.currently_selected.1;
+
+            println!("starting tile state {}", game_image_num);
+            return Some(Box::new(
+                TileState::new(ctx, game_image_num, player.player_settings.num_rows_cols)
+                    .expect("Failed to create tile state"),
             ));
         }
 
