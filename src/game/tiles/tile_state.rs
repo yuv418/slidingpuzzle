@@ -322,7 +322,9 @@ impl Scene for TileState {
                 }
             }
             // TODO move this to the update method
-            self.check_completed();
+            if self.game_started {
+                self.check_completed();
+            }
         }
     }
 
