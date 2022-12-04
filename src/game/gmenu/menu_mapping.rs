@@ -1,17 +1,36 @@
 use ggez::{
     glam::Vec2,
-    graphics::{self, Color, DrawMode, Mesh, PxScale, Rect, Text, TextFragment},
+    graphics::{self, Color, DrawMode, Drawable, Image, Mesh, PxScale, Rect, Text, TextFragment},
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
-use crate::game::{drawable::Drawable, scene::Scene};
+use crate::game::{drawable::Drawable as SlidingPuzzleDrawable, scene::Scene};
+
+pub enum GameMenuItemVariant {
+    // i.e a button
+    TextItem {
+        text_mesh: Text,
+    },
+    NumberInput {
+        number: u32,
+        prompt_mesh: Text,
+        number_mesh: Text,
+
+        // [ prompt [ number ] ] -> inner brackets are what this is for
+        number_highlight_rect: Mesh,
+    },
+
+    ImageItem {
+        image: Image,
+        caption_mesh: Text,
+    },
+}
 
 // We use a struct since it might help later for stuff such as colours
 // This will become drawable and let us control puzzle listings/settings
 // and hold the meshes for drawing whatever
-pub struct GameMenuMapping {
-    pub text: String,
+pub struct GameMenuItem {
     pub next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
 
     // Positioning
@@ -24,15 +43,16 @@ pub struct GameMenuMapping {
     select_animation: Option<AnimationSequence<f32>>,
 
     // Meshes
-    text_box_rect: Mesh,
-    menu_text: Text,
+    item_box_rect: Mesh,
+
+    item_variant: GameMenuItemVariant,
 
     // For use with select() and deselect() and drawing animations
     currently_selected: bool,
 }
 
 impl GameMenuMapping {
-    pub fn new(
+    pub fn new_text_item(
         ctx: &mut Context,
         text: &str,
         next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
@@ -41,21 +61,41 @@ impl GameMenuMapping {
         w: f32,
         h: f32,
     ) -> GameResult<Self> {
-        Ok(Self {
-            text: text.to_string(),
+        Self::new(
+            ctx,
             next_page,
+            GameMenuItemVariant::TextItem {
+                text_mesh: Text::new(TextFragment {
+                    text: text.to_string(),
+                    color: Some(Color::WHITE),
+                    font: Some("SecularOne-Regular".into()),
+                    scale: Some(PxScale::from(48.0)),
+                }),
+            },
             x,
             y,
             w,
             h,
-            select_animation: None,
-            menu_text: Text::new(TextFragment {
-                text: text.to_string(),
-                color: Some(Color::WHITE),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(48.0)),
-            }),
-            text_box_rect: Mesh::new_rounded_rectangle(
+        )
+    }
+
+    fn new(
+        ctx: &mut Context,
+        next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+        item_variant: GameMenuItemVariant,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+    ) -> GameResult<Self> {
+        Ok(Self {
+            next_page,
+            item_variant,
+            x,
+            y,
+            w,
+            h,
+            item_box_rect: Mesh::new_rounded_rectangle(
                 ctx,
                 DrawMode::fill(),
                 Rect {
@@ -67,6 +107,7 @@ impl GameMenuMapping {
                 8.0,
                 Color::BLACK,
             )?,
+            select_animation: None,
             currently_selected: false,
         })
     }
@@ -77,8 +118,14 @@ impl GameMenuMapping {
             (0.0, 0.0, EaseInOut),
             (self.w - 10.0, 0.5, EaseInOut)
         ]);
-        for frag in self.menu_text.fragments_mut() {
-            frag.color = Some(Color::BLACK);
+        match &mut self.item_variant {
+            GameMenuItemVariant::TextItem { text_mesh } => {
+                for frag in text_mesh.fragments_mut() {
+                    frag.color = Some(Color::BLACK);
+                }
+            }
+            GameMenuItemVariant::NumberInput { .. } => todo!(),
+            GameMenuItemVariant::ImageItem { .. } => todo!(),
         }
     }
     pub fn deselect(&mut self) {
@@ -87,15 +134,21 @@ impl GameMenuMapping {
             (self.w - 10.0, 0.0, EaseInOut),
             (0.0, 0.5, EaseInOut)
         ]);
-        for frag in self.menu_text.fragments_mut() {
-            frag.color = Some(Color::WHITE);
+        match &mut self.item_variant {
+            GameMenuItemVariant::TextItem { text_mesh } => {
+                for frag in text_mesh.fragments_mut() {
+                    frag.color = Some(Color::WHITE);
+                }
+            }
+            GameMenuItemVariant::NumberInput { .. } => todo!(),
+            GameMenuItemVariant::ImageItem { .. } => todo!(),
         }
     }
 }
 
-impl Drawable for GameMenuMapping {
+impl SlidingPuzzleDrawable for GameMenuMapping {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
-        canvas.draw(&self.text_box_rect, Vec2::new(self.x, self.y));
+        canvas.draw(&self.item_box_rect, Vec2::new(self.x, self.y));
         if self.currently_selected || self.select_animation.is_some() {
             let mut delete_animation = false;
             let selection_box = Mesh::new_rounded_rectangle(
@@ -124,16 +177,26 @@ impl Drawable for GameMenuMapping {
             canvas.draw(&selection_box, Vec2::new(self.x, 0.0));
         }
 
-        let mt_sz = self
-            .menu_text
-            .measure(ctx)
-            .expect("Failed to calculate menu text size");
-        let mt_y = self.y + ((80.0 - mt_sz.y) / 2.0);
+        match &self.item_variant {
+            GameMenuItemVariant::TextItem { text_mesh } => {
+                let mt_sz = text_mesh
+                    .measure(ctx)
+                    .expect("Failed to calculate menu text size");
+                let mt_y = self.y + ((80.0 - mt_sz.y) / 2.0);
 
-        canvas.draw(
-            &self.menu_text,
-            graphics::DrawParam::from([self.x + 20.0, mt_y]),
-        );
+                canvas.draw(text_mesh, graphics::DrawParam::from([self.x + 20.0, mt_y]));
+            }
+            GameMenuItemVariant::NumberInput {
+                number,
+                prompt_mesh,
+                number_mesh,
+                number_highlight_rect,
+            } => todo!(),
+            GameMenuItemVariant::ImageItem {
+                image,
+                caption_mesh,
+            } => todo!(),
+        }
 
         Ok(())
     }

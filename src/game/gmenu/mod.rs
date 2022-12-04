@@ -1,4 +1,4 @@
-use self::menu_mapping::GameMenuMapping;
+use self::menu_mapping::GameMenuItem;
 
 use super::drawable::Drawable as SlidingPuzzleDrawable;
 use super::player;
@@ -74,7 +74,7 @@ impl GameMenu {
         });
         let tx_s = title_text.measure(ctx)?;
         let mut menu_mappings = vec![
-            GameMenuMapping::new(
+            GameMenuItem::new_text_item(
                 ctx,
                 "Continue",
                 // TODO we probably want to move continue_game to the TileState class as a
@@ -85,7 +85,7 @@ impl GameMenu {
                 tx_s.x,
                 80.0,
             )?,
-            GameMenuMapping::new(
+            GameMenuItem::new_text_item(
                 ctx,
                 "Choose a Puzzle",
                 Box::new(next_page),
@@ -94,7 +94,7 @@ impl GameMenu {
                 tx_s.x,
                 80.0,
             )?,
-            GameMenuMapping::new(
+            GameMenuItem::new_text_item(
                 ctx,
                 "Settings",
                 Box::new(next_page),
