@@ -1,11 +1,9 @@
 use image::{io::Reader as ImageReader, GenericImageView, Pixel};
-use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 use rand::Rng;
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use ggez::{
-    event,
-    graphics::{self, Canvas, Image, ImageFormat},
+    graphics::{Canvas, Image, ImageFormat},
     input::keyboard::KeyInput,
     winit::event::VirtualKeyCode,
     Context, GameResult,
@@ -180,10 +178,6 @@ impl TileState {
         let mut rng = rand::thread_rng();
         let col_cnt_tiles = self.tiles.len();
         let row_cnt_tiles = self.tiles[0].len();
-        let tile1 = (
-            rng.gen_range(0..row_cnt_tiles) as usize,
-            rng.gen_range(0..col_cnt_tiles) as usize,
-        );
         // Choose a random adjacent tile
         let replacetile = if self.blank_cell == (0, 0) {
             rng.gen_range(0..2) as usize

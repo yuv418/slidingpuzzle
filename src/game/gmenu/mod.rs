@@ -1,16 +1,16 @@
 use super::drawable::Drawable as SlidingPuzzleDrawable;
 use super::scene::Scene;
 use ggez::glam::Vec2;
+use ggez::graphics::Canvas;
 use ggez::graphics::{self, Color, DrawMode, Mesh, PxScale, Rect, Text, TextFragment};
 use ggez::input::keyboard::KeyInput;
 use ggez::winit::event::VirtualKeyCode;
 use ggez::Context;
-use ggez::{
-    conf::{WindowMode, WindowSetup},
-    graphics::{Canvas, Drawable},
-};
-use keyframe::functions::{EaseInOut, EaseInOutQuad, EaseInOutQuint};
+use keyframe::functions::EaseInOut;
 use keyframe::{keyframes, AnimationSequence};
+
+pub mod puzzle_listing;
+pub mod settings;
 
 pub struct GameMenu {
     menu_mappings: Vec<GameMenuMapping>,

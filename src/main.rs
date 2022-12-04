@@ -1,9 +1,7 @@
 use std::path::PathBuf;
 
-use ggez::event;
-use ggez::graphics::Rect;
-use ggez::graphics::{self, Color};
-use ggez::{Context, GameResult};
+use game::player;
+use ggez::{event, graphics, GameResult};
 
 mod game;
 
@@ -27,7 +25,7 @@ pub fn main() -> GameResult {
     }
     let (mut ctx, event_loop) = cb.build()?;
 
-    let state = game::GameState::new("test.jpg".into(), 180, &mut ctx)?;
+    let state = game::GameState::new(&mut ctx)?;
 
     /*
              180 px top padding
@@ -52,6 +50,15 @@ pub fn main() -> GameResult {
         "SecularOne-Regular",
         graphics::FontData::from_path(&ctx, "/fonts/SecularOne-Regular.ttf")?,
     );
+    // Save file
+    let player = player::Player::load(&mut ctx);
+    if let Err(_) = player {
+        // TODO scene for inputting player name
+        let p = player::Player::new("test".to_string());
+        p.save(&mut ctx)?;
+    } else if let Ok(player) = player {
+        println!("{:?}", player);
+    }
 
     /*ctx.gfx.set_mode(
         ggez::conf::WindowMode::default()

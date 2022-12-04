@@ -10,5 +10,10 @@ ggez = "0.8"
 glam = "0.20.3"
 image = "0.24"
 rand = "0.8.5"
+
+uuid = { version = "1", features = [ "serde", "v4" ] }
+bincode = "1"
+serde = "1"
+
 keyframe = "1"
 keyframe_derive = "1"

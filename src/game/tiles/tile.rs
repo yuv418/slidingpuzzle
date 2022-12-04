@@ -1,6 +1,6 @@
 use ggez::{
     glam::Vec2,
-    graphics::{self, Canvas, Image},
+    graphics::{Canvas, Image},
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
@@ -57,7 +57,7 @@ impl Tile {
     }
 }
 impl Drawable for Tile {
-    fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
+    fn draw(&mut self, _ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
         if let Some(seq) = &mut self.animation {
             seq.advance_by(0.05);
             let anim_pos = seq.now();

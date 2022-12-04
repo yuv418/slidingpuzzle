@@ -1,18 +1,13 @@
+use self::scene::Scene;
 use ggez::event;
-use ggez::graphics::{self, Image};
+use ggez::graphics;
 use ggez::input::keyboard::KeyInput;
 use ggez::{Context, GameResult};
 use glam::*;
-use rand::Rng;
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
-
-use self::drawable::Drawable;
-use self::scene::Scene;
 
 pub mod drawable;
 pub mod gmenu;
+pub mod player;
 pub mod scene;
 pub mod tiles;
 
@@ -22,7 +17,7 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(img_path: PathBuf, tile_size: u32, context: &mut Context) -> GameResult<Self> {
+    pub fn new(_context: &mut Context) -> GameResult<Self> {
         // Loop through and make the tiles
         Ok(Self {
             current_scene: Box::new(gmenu::GameMenu::new()),
