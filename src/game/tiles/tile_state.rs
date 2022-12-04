@@ -352,7 +352,7 @@ impl Scene for TileState {
             }
 
             Some(Box::new(
-                PuzzleListing::new(ctx, 4 * (self.img_num % 4))
+                PuzzleListing::new(ctx, 4 * ((self.img_num) / 4))
                     .expect("Failed to return to puzzle listing"),
             ))
         } else {
