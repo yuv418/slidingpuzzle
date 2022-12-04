@@ -6,7 +6,7 @@ use ggez::{
 
 use crate::game::{drawable::Drawable, scene::Scene};
 
-use super::menu_item::GameMenuItem;
+use super::{menu_item::GameMenuItem, GameMenu};
 
 #[derive(Debug)]
 enum PaginationDirection {
@@ -21,6 +21,7 @@ pub struct PuzzleListing {
     menu_items: [[Option<GameMenuItem>; 2]; 2],
     title_mesh: Text,
     page_direction: Option<PaginationDirection>,
+    back: bool,
 }
 
 impl PuzzleListing {
@@ -64,6 +65,7 @@ impl PuzzleListing {
             title_mesh,
             menu_items,
             page_direction: None,
+            back: false,
         })
     }
 }
@@ -93,7 +95,7 @@ impl Drawable for PuzzleListing {
 impl Scene for PuzzleListing {
     fn handle_key_event(
         &mut self,
-        _ctx: &mut ggez::Context,
+        ctx: &mut ggez::Context,
         key_input: ggez::input::keyboard::KeyInput,
         repeat: bool,
     ) {
@@ -130,6 +132,9 @@ impl Scene for PuzzleListing {
                         self.page_direction = Some(PaginationDirection::Right);
                     }
                 }
+                VirtualKeyCode::Escape => {
+                    self.back = true;
+                }
                 _ => {}
             }
             if old_selected != self.currently_selected {
@@ -146,6 +151,12 @@ impl Scene for PuzzleListing {
     }
 
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {
+        if self.back {
+            return Some(Box::new(
+                GameMenu::new(ctx).expect("Failed to launch game menu"),
+            ));
+        }
+
         let next_image_path = |num: usize| -> String { format!("/images/{}.jpg", num) };
 
         let check_listing = match self.page_direction {
