@@ -246,4 +246,8 @@ impl Scene for GameMenu {
             None
         }
     }
+
+    fn draw_transition(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> ggez::GameResult {
+        self.draw(ctx, canvas)
+    }
 }

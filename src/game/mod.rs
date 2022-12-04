@@ -68,7 +68,6 @@ impl event::EventHandler<ggez::GameError> for GameState {
             graphics::Canvas::from_frame(ctx, graphics::Color::from([1.0, 1.0, 1.0, 1.0]));
 
         if let Some(seq) = &mut self.scene_transition {
-            println!("here");
             seq.advance_by(0.01);
             let drawable_size = ctx.gfx.drawable_size();
             let cover_rect = Mesh::new_rectangle(
@@ -88,11 +87,14 @@ impl event::EventHandler<ggez::GameError> for GameState {
             )?;
 
             if seq.progress() < 0.5 {
-                self.prev_scene.as_mut().unwrap().draw(ctx, &mut canvas)?;
+                self.prev_scene
+                    .as_mut()
+                    .unwrap()
+                    .draw_transition(ctx, &mut canvas)?;
             } else if seq.progress() == 0.5 {
                 self.prev_scene = None;
             } else {
-                self.current_scene.draw(ctx, &mut canvas)?;
+                self.current_scene.draw_transition(ctx, &mut canvas)?;
             }
 
             canvas.draw(&cover_rect, Vec2::new(0.0, 0.0));

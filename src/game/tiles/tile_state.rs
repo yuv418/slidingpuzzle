@@ -101,7 +101,7 @@ impl TileState {
                             row_buf_pix.push(rgba_val);
                         }
                     }
-                    println!("one-row length is {:?}", row_buf_pix.len());
+                    // println!("one-row length is {:?}", row_buf_pix.len());
                 }
                 println!("writing tile to tile_row");
                 let tile_to_insert = Tile {
@@ -133,6 +133,7 @@ impl TileState {
         // Remove one random tile from ref board.
         let i = rng.gen_range(0..row_cnt_tiles) as usize;
         let j = rng.gen_range(0..col_cnt_tiles) as usize;
+        println!("deleting {:?} from ref board", (i, j));
         tile_state.ref_board[i][j] = None;
         tile_state.tile_blank_cell = (i, j);
         tile_state.blank_cell = (i, j);
@@ -226,7 +227,7 @@ impl TileState {
 
         let (c1, c2) = self.blank_cell;
 
-        println!("swap {:?} {:?}", self.blank_cell, replacetile);
+        // println!("swap {:?} {:?}", self.blank_cell, replacetile);
         let tile2 = match replacetile {
             0 => {
                 // Down
@@ -304,6 +305,16 @@ impl Scene for TileState {
         } else {
             None
         }
+    }
+
+    fn draw_transition(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
+        for i in 0..self.ref_board.len() {
+            for j in 0..self.ref_board[i].len() {
+                let mut tile = self.tiles[i][j].borrow_mut();
+                tile.draw(ctx, canvas)?;
+            }
+        }
+        Ok(())
     }
 }
 
