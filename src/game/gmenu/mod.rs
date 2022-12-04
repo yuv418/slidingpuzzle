@@ -1,6 +1,7 @@
 use crate::game::player::PLAYER;
 
-use self::menu_mapping::GameMenuItem;
+use self::menu_item::GameMenuItem;
+use self::puzzle_listing::PuzzleListing;
 
 use super::drawable::Drawable as SlidingPuzzleDrawable;
 use super::player::{self, Player};
@@ -12,7 +13,7 @@ use ggez::input::keyboard::KeyInput;
 use ggez::winit::event::VirtualKeyCode;
 use ggez::{Context, GameResult};
 
-pub mod menu_mapping;
+pub mod menu_item;
 pub mod puzzle_listing;
 pub mod settings;
 
@@ -91,7 +92,11 @@ impl GameMenu {
             GameMenuItem::new_text_item(
                 ctx,
                 "Choose a Puzzle",
-                Box::new(next_page),
+                Box::new(|context: &mut Context| {
+                    Box::new(
+                        PuzzleListing::new(context, 0).expect("Failed to create puzzle listing"),
+                    )
+                }),
                 90.0,
                 110.0 + tx_s.y + 100.0,
                 tx_s.x,
@@ -159,7 +164,7 @@ impl Scene for GameMenu {
         }
     }
 
-    fn next_scene(&self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
+    fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
         if self.to_next_scene {
             Some((self.menu_mappings[self.currently_selected].next_page)(ctx))
         } else {

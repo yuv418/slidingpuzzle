@@ -298,7 +298,7 @@ impl Scene for TileState {
         }
     }
 
-    fn next_scene(&self, _ctx: &mut Context) -> Option<Box<dyn Scene>> {
+    fn next_scene(&mut self, _ctx: &mut Context) -> Option<Box<dyn Scene>> {
         if self.game_completed() {
             // Update player completed puzzles,
             // point value?

@@ -78,6 +78,34 @@ impl GameMenuItem {
             h,
         )
     }
+    pub fn new_image_item(
+        ctx: &mut Context,
+        image: Image,
+        caption: &str,
+        next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+    ) -> GameResult<Self> {
+        Self::new(
+            ctx,
+            next_page,
+            GameMenuItemVariant::ImageItem {
+                image,
+                caption_mesh: Text::new(TextFragment {
+                    text: caption.to_string(),
+                    color: Some(Color::WHITE),
+                    font: Some("SecularOne-Regular".into()),
+                    scale: Some(PxScale::from(28.0)),
+                }),
+            },
+            x,
+            y,
+            w,
+            h,
+        )
+    }
 
     fn new(
         ctx: &mut Context,
@@ -125,7 +153,11 @@ impl GameMenuItem {
                 }
             }
             GameMenuItemVariant::NumberInput { .. } => todo!(),
-            GameMenuItemVariant::ImageItem { .. } => todo!(),
+            GameMenuItemVariant::ImageItem { caption_mesh, .. } => {
+                for frag in caption_mesh.fragments_mut() {
+                    frag.color = Some(Color::BLACK);
+                }
+            }
         }
     }
     pub fn deselect(&mut self) {
@@ -141,7 +173,11 @@ impl GameMenuItem {
                 }
             }
             GameMenuItemVariant::NumberInput { .. } => todo!(),
-            GameMenuItemVariant::ImageItem { .. } => todo!(),
+            GameMenuItemVariant::ImageItem { caption_mesh, .. } => {
+                for frag in caption_mesh.fragments_mut() {
+                    frag.color = Some(Color::WHITE);
+                }
+            }
         }
     }
 }
@@ -195,7 +231,25 @@ impl SlidingPuzzleDrawable for GameMenuItem {
             GameMenuItemVariant::ImageItem {
                 image,
                 caption_mesh,
-            } => todo!(),
+            } => {
+                // Want image to be self.w - 60.0
+
+                let scale_factor = (self.w - 60.0) / image.width() as f32;
+
+                canvas.draw(
+                    image,
+                    // We have to scale the image to fit in the box
+                    graphics::DrawParam::from([self.x + 20.0, self.y + 20.0])
+                        .scale(Vec2::from((scale_factor, scale_factor))),
+                );
+                canvas.draw(
+                    caption_mesh,
+                    graphics::DrawParam::from([
+                        self.x + 20.0,
+                        self.y + (image.height() as f32 * scale_factor) + 25.0,
+                    ]),
+                );
+            }
         }
 
         Ok(())
