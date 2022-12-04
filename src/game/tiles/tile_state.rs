@@ -1,6 +1,6 @@
 use image::{io::Reader as ImageReader, GenericImageView, Pixel};
 use rand::Rng;
-use std::{cell::RefCell, path::PathBuf, rc::Rc};
+use std::{cell::RefCell, io::BufReader, path::PathBuf, rc::Rc};
 
 use ggez::{
     graphics::{Canvas, Image, ImageFormat},
@@ -44,14 +44,17 @@ pub struct TileState {
 impl TileState {
     pub fn new(
         context: &mut Context,
-        img_path: PathBuf,
+        img_num: usize,
         tile_size: u32,
         x: f32,
         y: f32,
     ) -> GameResult<Self> {
-        let img = ImageReader::open(img_path)?
-            .decode()
-            .expect("failed to open image");
+        let mut img = ImageReader::new(BufReader::new(
+            context.fs.open(format!("/images/{}.jpg", img_num))?,
+        ));
+        img.set_format(image::ImageFormat::Jpeg);
+
+        let img = img.decode().expect("failed to open image");
 
         // How many tiles in a row? In a column?
         let col_cnt_tiles = img.width() / tile_size;
@@ -284,7 +287,7 @@ impl Scene for TileState {
         }
     }
 
-    fn next_scene(&self) -> Option<Box<dyn Scene>> {
+    fn next_scene(&self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
         None
     }
 }

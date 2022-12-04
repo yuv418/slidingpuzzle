@@ -6,7 +6,7 @@ use uuid::Uuid;
 pub struct Player {
     id: Uuid,
     username: String,
-    completed_puzzles: usize,
+    pub completed_puzzles: usize,
 }
 
 impl Player {

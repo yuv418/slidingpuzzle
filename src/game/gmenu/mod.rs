@@ -1,5 +1,7 @@
 use super::drawable::Drawable as SlidingPuzzleDrawable;
+use super::player;
 use super::scene::Scene;
+use super::tiles::TileState;
 use ggez::glam::Vec2;
 use ggez::graphics::Canvas;
 use ggez::graphics::{self, Color, DrawMode, Mesh, PxScale, Rect, Text, TextFragment};
@@ -27,20 +29,37 @@ pub struct GameMenu {
 // We use a struct since it might help later for stuff such as colours
 pub struct GameMenuMapping {
     pub text: String,
-    pub next_page: Box<dyn Fn() -> Box<dyn Scene>>,
+    pub next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
 }
 
-pub fn next_page() -> Box<dyn Scene> {
+pub fn next_page(ctx: &mut Context) -> Box<dyn Scene> {
     println!("Going to next page");
     unimplemented!()
 }
 
 impl GameMenu {
-    pub fn new() -> Self {
+    pub fn new(ctx: &mut Context) -> Self {
         let menu_mappings = vec![
             GameMenuMapping {
                 text: "Continue".to_string(),
-                next_page: Box::new(next_page),
+                next_page: Box::new(|context: &mut Context| {
+                    let player = player::Player::load(context).expect("Failed to load player");
+                    let tile_state = Box::new(
+                        TileState::new(context, player.completed_puzzles, 180, 0.0, 0.0)
+                            .expect("Failed to create TileState"),
+                    );
+
+                    let tile_gap = tile_state.tiles[0][0].borrow().side_len + 10; // determine the gap here
+                    let win_width = (180 + (tile_state.tiles[0].len() as u32 * tile_gap)) as f32;
+                    let win_height = (300 + (tile_gap * tile_state.tiles.len() as u32)) as f32;
+                    println!("the new window dimensions are {}x{}", win_width, win_height);
+                    context.gfx.set_mode(
+                        ggez::conf::WindowMode::default()
+                            .dimensions(win_width, win_height)
+                            .resizable(true),
+                    );
+                    tile_state
+                }),
             },
             GameMenuMapping {
                 text: "Choose a Puzzle".to_string(),
@@ -206,9 +225,9 @@ impl Scene for GameMenu {
         }
     }
 
-    fn next_scene(&self) -> Option<Box<dyn Scene>> {
+    fn next_scene(&self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
         if self.to_next_scene {
-            Some((self.menu_mappings[self.currently_selected].next_page)())
+            Some((self.menu_mappings[self.currently_selected].next_page)(ctx))
         } else {
             None
         }

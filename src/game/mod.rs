@@ -17,10 +17,10 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(_context: &mut Context) -> GameResult<Self> {
+    pub fn new(context: &mut Context) -> GameResult<Self> {
         // Loop through and make the tiles
         Ok(Self {
-            current_scene: Box::new(gmenu::GameMenu::new()),
+            current_scene: Box::new(gmenu::GameMenu::new(context)),
             set_winsize: false,
         })
     }
@@ -36,8 +36,8 @@ impl event::EventHandler<ggez::GameError> for GameState {
         self.current_scene.handle_key_event(ctx, key_input, repeat);
         Ok(())
     }
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        if let Some(next_scene) = self.current_scene.next_scene() {
+    fn update(&mut self, ctx: &mut Context) -> GameResult {
+        if let Some(next_scene) = self.current_scene.next_scene(ctx) {
             self.current_scene = next_scene;
         }
         Ok(())
