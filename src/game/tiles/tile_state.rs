@@ -359,10 +359,10 @@ impl Drawable for TileState {
                         } else if self.total_tiles_swapped == TOTAL_SCRAMBLE_SWAPS {
                             // Fix the missing tile
                             let tile = &self.tiles[i][j];
-                            let tile_update = tile.as_ref().borrow_mut();
+                            let side_len = { tile.as_ref().borrow().side_len };
                             let (m_x, m_y) = self.tile_blank_cell;
                             self.tiles[m_x][m_y].as_ref().borrow_mut().pos =
-                                TilePosition::from_ij(m_x, m_y, tile_update.side_len);
+                                TilePosition::from_ij(m_x, m_y, side_len);
                             self.game_started = true;
                         }
                         if let Some(tile) = &self.ref_board[i][j] {
