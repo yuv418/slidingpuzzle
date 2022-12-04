@@ -45,8 +45,14 @@ impl GameMenu {
                 next_page: Box::new(|context: &mut Context| {
                     let player = player::Player::load(context).expect("Failed to load player");
                     let tile_state = Box::new(
-                        TileState::new(context, player.completed_puzzles, 180, 0.0, 0.0)
-                            .expect("Failed to create TileState"),
+                        TileState::new(
+                            context,
+                            player.completed_puzzles,
+                            player.player_settings.num_rows_cols,
+                            0.0,
+                            0.0,
+                        )
+                        .expect("Failed to create TileState"),
                     );
 
                     let tile_gap = tile_state.tiles[0][0].borrow().side_len + 10; // determine the gap here

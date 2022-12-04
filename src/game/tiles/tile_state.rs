@@ -45,7 +45,7 @@ impl TileState {
     pub fn new(
         context: &mut Context,
         img_num: usize,
-        tile_size: u32,
+        num_rows_cols: usize,
         x: f32,
         y: f32,
     ) -> GameResult<Self> {
@@ -57,8 +57,10 @@ impl TileState {
         let img = img.decode().expect("failed to open image");
 
         // How many tiles in a row? In a column?
-        let col_cnt_tiles = img.width() / tile_size;
-        let row_cnt_tiles = img.height() / tile_size;
+        let col_cnt_tiles = num_rows_cols; // img.width() / tile_size;
+        let row_cnt_tiles = num_rows_cols; // img.height() / tile_size;
+
+        let tile_size: u32 = img.width() / num_rows_cols as u32;
 
         let mut tile_state = Self {
             tiles: vec![],
@@ -83,6 +85,10 @@ impl TileState {
             for j in 1..(col_cnt_tiles + 1) {
                 // Go through each square block, adding a tile to our TileState
                 let mut row_buf_pix = vec![];
+
+                let i = i as u32;
+                let j = j as u32;
+
                 for y in (tile_size * (i - 1))..(tile_size * i) {
                     // add each row individiaully to the tile_to_insert
                     // row buffer of pixels

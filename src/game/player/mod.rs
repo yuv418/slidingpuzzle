@@ -3,10 +3,16 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct PlayerSettings {
+    pub num_rows_cols: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Player {
     id: Uuid,
     username: String,
     pub completed_puzzles: usize,
+    pub player_settings: PlayerSettings,
 }
 
 impl Player {
@@ -25,6 +31,7 @@ impl Player {
             id: Uuid::new_v4(),
             username,
             completed_puzzles: 0,
+            player_settings: PlayerSettings { num_rows_cols: 3 },
         }
     }
 }
