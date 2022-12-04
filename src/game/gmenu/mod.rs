@@ -9,12 +9,15 @@ use ggez::{
     conf::{WindowMode, WindowSetup},
     graphics::{Canvas, Drawable},
 };
-use keyframe::functions::EaseInOut;
+use keyframe::functions::{EaseInOut, EaseInOutQuad, EaseInOutQuint};
 use keyframe::{keyframes, AnimationSequence};
 
 pub struct GameMenu {
     menu_mappings: Vec<GameMenuMapping>,
     currently_selected: usize,
+    to_next_scene: bool,
+
+    // Animation stuff
     should_animate_from: Option<usize>,
     in_animating_selection: Option<AnimationSequence<f32>>,
     out_animating_selection: Option<AnimationSequence<f32>>,
@@ -24,10 +27,11 @@ pub struct GameMenu {
 // We use a struct since it might help later for stuff such as colours
 pub struct GameMenuMapping {
     pub text: String,
-    pub next_page: Box<dyn Fn()>,
+    pub next_page: Box<dyn Fn() -> Box<dyn Scene>>,
 }
 
-pub fn next_page() {
+pub fn next_page() -> Box<dyn Scene> {
+    println!("Going to next page");
     unimplemented!()
 }
 
@@ -50,6 +54,7 @@ impl GameMenu {
         Self {
             menu_mappings,
             currently_selected: 0,
+            to_next_scene: false,
             should_animate_from: None,
             in_animating_selection: None,
             out_animating_selection: None,
@@ -192,9 +197,20 @@ impl Scene for GameMenu {
                             self.currently_selected += 1
                         }
                     }
+                    VirtualKeyCode::Return => {
+                        self.to_next_scene = true;
+                    }
                     _ => {}
                 }
             }
+        }
+    }
+
+    fn next_scene(&self) -> Option<Box<dyn Scene>> {
+        if self.to_next_scene {
+            Some((self.menu_mappings[self.currently_selected].next_page)())
+        } else {
+            None
         }
     }
 }

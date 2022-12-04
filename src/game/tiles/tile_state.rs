@@ -289,6 +289,10 @@ impl Scene for TileState {
             self.check_completed();
         }
     }
+
+    fn next_scene(&self) -> Option<Box<dyn Scene>> {
+        None
+    }
 }
 
 impl Drawable for TileState {
