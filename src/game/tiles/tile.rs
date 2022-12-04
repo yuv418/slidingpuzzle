@@ -1,8 +1,8 @@
 use ggez::{
-    graphics::{self, Image},
+    glam::Vec2,
+    graphics::{self, Canvas, Image},
     Context, GameResult,
 };
-use glam::Vec2;
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 use keyframe_derive::CanTween;
 
@@ -57,16 +57,16 @@ impl Tile {
     }
 }
 impl Drawable for Tile {
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
         if let Some(seq) = &mut self.animation {
             seq.advance_by(0.05);
             let anim_pos = seq.now();
-            graphics::draw(ctx, &self.image_buf, (Vec2::new(anim_pos.x, anim_pos.y),))?;
+            canvas.draw(&self.image_buf, Vec2::new(anim_pos.x, anim_pos.y));
             if seq.finished() {
                 self.animation = None;
             }
         } else {
-            graphics::draw(ctx, &self.image_buf, (Vec2::new(self.pos.x, self.pos.y),))?;
+            canvas.draw(&self.image_buf, Vec2::new(self.pos.x, self.pos.y));
         }
         Ok(())
     }

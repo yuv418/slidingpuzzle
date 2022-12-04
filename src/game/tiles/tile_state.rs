@@ -5,11 +5,13 @@ use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 use ggez::{
     event,
-    graphics::{self, Image},
+    graphics::{self, Canvas, Image, ImageFormat},
+    input::keyboard::KeyInput,
+    winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 
-use crate::game::drawable::Drawable;
+use crate::game::{drawable::Drawable, scene::Scene};
 
 use super::{Tile, TilePosition};
 
@@ -94,12 +96,13 @@ impl TileState {
                 println!("writing tile to tile_row");
                 let tile_to_insert = Tile {
                     side_len: tile_size,
-                    image_buf: Image::from_rgba8(
+                    image_buf: Image::from_pixels(
                         context,
-                        tile_size as u16,
-                        tile_size as u16,
                         &row_buf_pix,
-                    )?,
+                        ImageFormat::Rgba8UnormSrgb,
+                        tile_size,
+                        tile_size,
+                    ),
                     pos: TilePosition::from_ij_no_gap(i as usize - 1, j as usize - 1, tile_size),
                     animation: None,
                 };
@@ -247,44 +250,41 @@ impl TileState {
             self.swap_ref_tiles(self.blank_cell, tile2, 0.15)
         }
     }
-
-    pub fn handle_key_event(
-        &mut self,
-        _ctx: &mut Context,
-        keycode: event::KeyCode,
-        _keymods: event::KeyMods,
-        repeat: bool,
-    ) {
+}
+impl Scene for TileState {
+    fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, repeat: bool) {
         let i = self.blank_cell.0;
         let j = self.blank_cell.1;
         if !repeat && !self.game_completed() {
             // TODO make this DRYer
-            match keycode {
-                event::KeyCode::Up => {
-                    // Tile below space
-                    if i + 1 < self.ref_board.len() {
-                        self.swap_ref_tiles((i, j), (i + 1, j), TILE_SLIDE_DURATION);
+            if let Some(vkeycode) = key_input.keycode {
+                match vkeycode {
+                    VirtualKeyCode::Up => {
+                        // Tile below space
+                        if i + 1 < self.ref_board.len() {
+                            self.swap_ref_tiles((i, j), (i + 1, j), TILE_SLIDE_DURATION);
+                        }
                     }
-                }
-                event::KeyCode::Down => {
-                    // Tile above space
-                    if i != 0 {
-                        self.swap_ref_tiles((i, j), (i - 1, j), TILE_SLIDE_DURATION);
+                    VirtualKeyCode::Down => {
+                        // Tile above space
+                        if i != 0 {
+                            self.swap_ref_tiles((i, j), (i - 1, j), TILE_SLIDE_DURATION);
+                        }
                     }
-                }
-                event::KeyCode::Left => {
-                    // Tile left of space
-                    if j + 1 < self.ref_board[i].len() {
-                        self.swap_ref_tiles((i, j), (i, j + 1), TILE_SLIDE_DURATION);
+                    VirtualKeyCode::Left => {
+                        // Tile left of space
+                        if j + 1 < self.ref_board[i].len() {
+                            self.swap_ref_tiles((i, j), (i, j + 1), TILE_SLIDE_DURATION);
+                        }
                     }
-                }
-                event::KeyCode::Right => {
-                    // Tile right of space
-                    if j != 0 {
-                        self.swap_ref_tiles((i, j), (i, j - 1), TILE_SLIDE_DURATION);
+                    VirtualKeyCode::Right => {
+                        // Tile right of space
+                        if j != 0 {
+                            self.swap_ref_tiles((i, j), (i, j - 1), TILE_SLIDE_DURATION);
+                        }
                     }
+                    _ => {}
                 }
-                _ => {}
             }
             self.check_completed();
         }
@@ -292,7 +292,7 @@ impl TileState {
 }
 
 impl Drawable for TileState {
-    fn draw(&mut self, ctx: &mut Context) -> GameResult {
+    fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
         // draw all tiles with a 10px gap between each title
 
         if let Some(current_animation) = self.current_animation {
@@ -377,10 +377,9 @@ impl Drawable for TileState {
                 .as_ref()
                 .borrow_mut();
 
-                tile.draw(ctx)?;
+                tile.draw(ctx, canvas)?;
             }
         }
-        graphics::present(ctx)?;
 
         Ok(())
     }
