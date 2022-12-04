@@ -51,7 +51,7 @@ pub struct GameMenuItem {
     currently_selected: bool,
 }
 
-impl GameMenuMapping {
+impl GameMenuItem {
     pub fn new_text_item(
         ctx: &mut Context,
         text: &str,
@@ -146,7 +146,7 @@ impl GameMenuMapping {
     }
 }
 
-impl SlidingPuzzleDrawable for GameMenuMapping {
+impl SlidingPuzzleDrawable for GameMenuItem {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         canvas.draw(&self.item_box_rect, Vec2::new(self.x, self.y));
         if self.currently_selected || self.select_animation.is_some() {

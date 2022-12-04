@@ -15,7 +15,7 @@ pub mod puzzle_listing;
 pub mod settings;
 
 pub struct GameMenu {
-    menu_mappings: Vec<GameMenuMapping>,
+    menu_mappings: Vec<GameMenuItem>,
     currently_selected: usize,
     to_next_scene: bool,
 
