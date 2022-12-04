@@ -1,3 +1,5 @@
+use std::collections::BinaryHeap;
+
 use ggez::{Context, GameResult};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -11,7 +13,7 @@ pub struct PlayerSettings {
 pub struct Player {
     id: Uuid,
     username: String,
-    pub completed_puzzles: usize,
+    pub completed_puzzles: BinaryHeap<usize>,
     pub player_settings: PlayerSettings,
 }
 
@@ -30,7 +32,7 @@ impl Player {
         Self {
             id: Uuid::new_v4(),
             username,
-            completed_puzzles: 0,
+            completed_puzzles: BinaryHeap::new(),
             player_settings: PlayerSettings { num_rows_cols: 3 },
         }
     }

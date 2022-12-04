@@ -43,11 +43,19 @@ impl GameMenu {
             GameMenuMapping {
                 text: "Continue".to_string(),
                 next_page: Box::new(|context: &mut Context| {
+                    // Is it really efficient to load the player randomly here?
                     let player = player::Player::load(context).expect("Failed to load player");
                     let tile_state = Box::new(
                         TileState::new(
                             context,
-                            player.completed_puzzles,
+                            if let Some(max_pzl) = player.completed_puzzles.peek() {
+                                // We'll have to add some kind of check to make sure
+                                // that the player hasn't actually completed the entire game,
+                                // otherwise this would cause problems.
+                                max_pzl + 1
+                            } else {
+                                0
+                            },
                             player.player_settings.num_rows_cols,
                             0.0,
                             0.0,

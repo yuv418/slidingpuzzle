@@ -37,6 +37,8 @@ pub struct TileState {
 
     swapping_tiles: bool,
 
+    img_num: usize,
+
     pub x: f32,
     pub y: f32,
 }
@@ -75,6 +77,7 @@ impl TileState {
             game_completed: false,
             current_animation: None,
             previous_swap: None,
+            img_num,
             x,
             y,
         };
@@ -294,7 +297,13 @@ impl Scene for TileState {
     }
 
     fn next_scene(&self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
-        None
+        if self.game_completed() {
+            // Update player completed puzzles,
+            // point value?
+            None
+        } else {
+            None
+        }
     }
 }
 
