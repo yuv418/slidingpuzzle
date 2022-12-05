@@ -5,7 +5,18 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = [ "multiplayer" ]
+multiplayer = ["dep:webrtc", "dep:flume", "dep:tokio", "dep:bytes" ]
+
+
 [dependencies]
+
+webrtc = { version = "0.6", optional = true }
+flume = { version = "0.10", optional = true }
+tokio = { version = "1", optional = true }
+bytes = { version = "1", optional = true }
+
 ggez = "0.8"
 glam = "0.20.3"
 image = "0.24"

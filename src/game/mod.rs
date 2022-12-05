@@ -19,6 +19,9 @@ pub mod player;
 pub mod scene;
 pub mod tiles;
 
+#[cfg(feature = "multiplayer")]
+pub mod multiplayer;
+
 pub struct GameState {
     pub current_scene: Box<dyn Scene>,
     pub prev_scene: Option<Box<dyn Scene>>,
