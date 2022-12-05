@@ -1,6 +1,6 @@
 use ggez::{
     glam::Vec2,
-    graphics::{self, Color, DrawMode, Drawable, Image, Mesh, PxScale, Rect, Text, TextFragment},
+    graphics::{self, Color, DrawMode, Image, Mesh, PxScale, Rect, Text, TextFragment},
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
@@ -12,13 +12,15 @@ pub enum GameMenuItemVariant {
     TextItem {
         text_mesh: Text,
     },
-    NumberInput {
-        number: u32,
-        prompt_mesh: Text,
-        number_mesh: Text,
+    InputItem {
+        is_num: bool,
+        text: String,
 
-        // [ prompt [ number ] ] -> inner brackets are what this is for
-        number_highlight_rect: Mesh,
+        prompt_mesh: Text,
+
+        // [ prompt [ text ] ] -> inner brackets are what this is for
+        text_highlight_rect: Mesh,
+        selected_text_highlight_rect: Mesh,
     },
 
     ImageItem {
@@ -34,8 +36,9 @@ pub struct GameMenuItem {
     pub next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
 
     // Positioning
-    x: f32,
-    y: f32,
+    // Public for keyframing purposes
+    pub x: f32,
+    pub y: f32,
     w: f32,
     h: f32,
 
@@ -52,6 +55,73 @@ pub struct GameMenuItem {
 }
 
 impl GameMenuItem {
+    pub fn handle_input(&mut self, c: char) {
+        // Backspace
+        if let GameMenuItemVariant::InputItem { is_num, text, .. } = &mut self.item_variant {
+            if c == '\x08' {
+                text.pop();
+            } else if !*is_num {
+                text.push(c);
+            } else if let Ok(_) = (text.to_owned() + &c.to_string()).parse::<u32>() {
+                text.push(c);
+            }
+        }
+    }
+    pub fn new_input_item(
+        ctx: &mut Context,
+        prompt: &str,
+        is_num: bool,
+        next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+    ) -> GameResult<Self> {
+        let prompt_mesh = Text::new(TextFragment {
+            text: prompt.to_string(),
+            color: Some(Color::WHITE),
+            font: Some("SecularOne-Regular".into()),
+            scale: Some(PxScale::from(38.0)),
+        });
+        let pm_sz = prompt_mesh.measure(ctx)?;
+        Self::new(
+            ctx,
+            next_page,
+            GameMenuItemVariant::InputItem {
+                prompt_mesh,
+                is_num,
+                text: "".to_string(),
+                text_highlight_rect: Mesh::new_rounded_rectangle(
+                    ctx,
+                    DrawMode::fill(),
+                    Rect {
+                        x: 0.0,
+                        y: 0.0,
+                        w: w * 0.8,
+                        h: 30.0,
+                    },
+                    5.0,
+                    Color::WHITE,
+                )?,
+                selected_text_highlight_rect: Mesh::new_rounded_rectangle(
+                    ctx,
+                    DrawMode::fill(),
+                    Rect {
+                        x: 0.0,
+                        y: 0.0,
+                        w: w * 0.8,
+                        h: 30.0,
+                    },
+                    5.0,
+                    Color::BLACK,
+                )?,
+            },
+            x,
+            y,
+            w,
+            h,
+        )
+    }
     pub fn new_text_item(
         ctx: &mut Context,
         text: &str,
@@ -152,7 +222,17 @@ impl GameMenuItem {
                     frag.color = Some(Color::BLACK);
                 }
             }
-            GameMenuItemVariant::NumberInput { .. } => todo!(),
+            GameMenuItemVariant::InputItem {
+                is_num,
+                text,
+                prompt_mesh,
+                text_highlight_rect,
+                selected_text_highlight_rect,
+            } => {
+                for frag in prompt_mesh.fragments_mut() {
+                    frag.color = Some(Color::BLACK);
+                }
+            }
             GameMenuItemVariant::ImageItem { caption_mesh, .. } => {
                 for frag in caption_mesh.fragments_mut() {
                     frag.color = Some(Color::BLACK);
@@ -172,7 +252,18 @@ impl GameMenuItem {
                     frag.color = Some(Color::WHITE);
                 }
             }
-            GameMenuItemVariant::NumberInput { .. } => todo!(),
+
+            GameMenuItemVariant::InputItem {
+                is_num,
+                text,
+                prompt_mesh,
+                text_highlight_rect,
+                selected_text_highlight_rect,
+            } => {
+                for frag in prompt_mesh.fragments_mut() {
+                    frag.color = Some(Color::WHITE);
+                }
+            }
             GameMenuItemVariant::ImageItem { caption_mesh, .. } => {
                 for frag in caption_mesh.fragments_mut() {
                     frag.color = Some(Color::WHITE);
@@ -222,12 +313,43 @@ impl SlidingPuzzleDrawable for GameMenuItem {
 
                 canvas.draw(text_mesh, graphics::DrawParam::from([self.x + 20.0, mt_y]));
             }
-            GameMenuItemVariant::NumberInput {
-                number,
+            GameMenuItemVariant::InputItem {
+                is_num,
+                text,
                 prompt_mesh,
-                number_mesh,
-                number_highlight_rect,
-            } => todo!(),
+                text_highlight_rect,
+                selected_text_highlight_rect,
+            } => {
+                canvas.draw(
+                    prompt_mesh,
+                    graphics::DrawParam::from([self.x + 20.0, self.y + 10.0]),
+                );
+                let pm_sz = prompt_mesh.measure(ctx)?;
+                canvas.draw(
+                    if !self.currently_selected {
+                        text_highlight_rect
+                    } else {
+                        selected_text_highlight_rect
+                    },
+                    graphics::DrawParam::from([self.x + 20.0, self.y + pm_sz.y + 20.0]),
+                );
+                // Draw actual text
+                let text_draw = Text::new(TextFragment {
+                    text: text.clone(),
+                    font: Some("SecularOne-Regular".into()),
+                    scale: Some(PxScale::from(28.0)),
+                    color: Some(if self.currently_selected {
+                        Color::WHITE
+                    } else {
+                        Color::BLACK
+                    }),
+                });
+                let y_off = (30.0 - text_draw.measure(ctx)?.y) / 2.0;
+                canvas.draw(
+                    &text_draw,
+                    graphics::DrawParam::from([self.x + 30.0, self.y + pm_sz.y + 20.0 + y_off]),
+                );
+            }
             GameMenuItemVariant::ImageItem {
                 image,
                 caption_mesh,

@@ -30,10 +30,14 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(context: &mut Context) -> GameResult<Self> {
+    pub fn new(context: &mut Context, intro: bool) -> GameResult<Self> {
         // Loop through and make the tiles
         Ok(Self {
-            current_scene: Box::new(gmenu::GameMenu::new(context)?),
+            current_scene: if intro {
+                Box::new(player::settings_scene::SettingsScene::new(context, true)?)
+            } else {
+                Box::new(gmenu::GameMenu::new(context)?)
+            },
             prev_scene: None,
             set_winsize: false,
             scene_transition: None,
@@ -42,6 +46,10 @@ impl GameState {
 }
 
 impl event::EventHandler<ggez::GameError> for GameState {
+    fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) -> GameResult {
+        self.current_scene.text_input_event(ctx, c);
+        Ok(())
+    }
     fn key_down_event(
         &mut self,
         ctx: &mut Context,

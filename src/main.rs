@@ -46,23 +46,19 @@ pub fn main() -> GameResult {
     // copied straight from https://github.com/ggez/ggez/blob/master/examples/files.rs
 
     // Drop the mutex by putting it in its own scope
-    {
+    let intro = {
         let mut opt_player = PLAYER.lock().unwrap();
         let loaded_player = Player::load(&mut ctx);
 
-        *opt_player = Some(match loaded_player {
-            Err(_) => {
-                let p = Player::new("test".to_string());
-                p.save(&mut ctx)?;
-                p
-            }
+        match loaded_player {
+            Err(_) => true,
             Ok(p) => {
                 println!("{:?}", p);
-                p
+                false
             }
-        });
-    }
-    let state = game::GameState::new(&mut ctx)?;
+        }
+    };
+    let state = game::GameState::new(&mut ctx, intro)?;
 
     // ctx.gfx.set_screen_coordinates(&mut ctx, Rect::new(0.0, 0.0, win_width, win_height))?
 

@@ -9,6 +9,8 @@ use ggez::{Context, GameResult};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+pub mod settings_scene;
+
 use lazy_static::lazy_static;
 
 // TODO use a parking lot Mutex

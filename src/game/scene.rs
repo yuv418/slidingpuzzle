@@ -8,4 +8,5 @@ pub trait Scene: Drawable {
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>>;
     // To use when the scene is transitioning to/from the next scene
     fn draw_transition(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult;
+    fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {}
 }

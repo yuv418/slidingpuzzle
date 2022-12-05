@@ -286,7 +286,7 @@ impl Scene for TileState {
     fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, repeat: bool) {
         let i = self.blank_cell.0;
         let j = self.blank_cell.1;
-        if !repeat && !self.game_completed() {
+        if !repeat && !self.game_completed() && self.game_started {
             // TODO make this DRYer
             if let Some(vkeycode) = key_input.keycode {
                 match vkeycode {
@@ -322,9 +322,7 @@ impl Scene for TileState {
                 }
             }
             // TODO move this to the update method
-            if self.game_started {
-                self.check_completed();
-            }
+            self.check_completed();
         }
     }
 
