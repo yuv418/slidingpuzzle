@@ -56,10 +56,13 @@ pub struct GameMenuItem {
 
 impl GameMenuItem {
     pub fn handle_input(&mut self, c: char) {
-        // Backspace
         if let GameMenuItemVariant::InputItem { is_num, text, .. } = &mut self.item_variant {
+            // Backspace
             if c == '\x08' {
                 text.pop();
+            } else if c == '\n' || c == '\r' {
+                // Prevent enters
+                return;
             } else if !*is_num {
                 text.push(c);
             } else if let Ok(_) = (text.to_owned() + &c.to_string()).parse::<u32>() {
@@ -67,6 +70,16 @@ impl GameMenuItem {
             }
         }
     }
+
+    // You'll have to parse the String to an int yourself ):
+    pub fn get_input_value(&mut self) -> Option<String> {
+        if let GameMenuItemVariant::InputItem { text, .. } = &self.item_variant {
+            Some(text.to_string())
+        } else {
+            None
+        }
+    }
+
     pub fn new_input_item(
         ctx: &mut Context,
         prompt: &str,

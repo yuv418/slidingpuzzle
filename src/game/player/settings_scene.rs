@@ -6,7 +6,13 @@ use ggez::{
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
-use crate::game::{drawable::Drawable, gmenu::menu_item::GameMenuItem, scene::Scene};
+use crate::game::{
+    drawable::Drawable,
+    gmenu::{menu_item::GameMenuItem, GameMenu},
+    scene::Scene,
+};
+
+use super::{Player, PlayerSettings, PLAYER};
 
 pub struct SettingsScene {
     intro: bool,
@@ -24,12 +30,35 @@ pub struct SettingsScene {
     options: Vec<GameMenuItem>,
     selected_option: usize,
 
+    advance_scene: bool,
+
     main: Text,
 }
 
 const INPUT_BOX_HEIGHT: f32 = 110.0;
 
 impl SettingsScene {
+    pub fn save_configuration(&mut self, ctx: &mut Context) -> GameResult {
+        // Should be safe to unwrap here due to prior parsing
+        let username = self.options[0].get_input_value().unwrap();
+        let num_rows_cols = self.options[1].get_input_value().unwrap().parse().unwrap();
+
+        let mut opt_player = PLAYER.lock().unwrap();
+        match &mut *opt_player {
+            None => *opt_player = Some(Player::new(username, PlayerSettings { num_rows_cols })),
+            Some(player) => {
+                (*player).username = username;
+                (*player).player_settings.num_rows_cols = num_rows_cols;
+            }
+        }
+
+        // Finish sittings iff player save worked
+        if let Ok(_) = opt_player.as_ref().unwrap().save(ctx) {
+            self.advance_scene = true;
+        }
+
+        Ok(())
+    }
     pub fn new(ctx: &mut Context, intro: bool) -> GameResult<Self> {
         let title_fragment = TextFragment {
             text: "".to_string(),
@@ -91,6 +120,7 @@ impl SettingsScene {
                 ..title_fragment.clone()
             }),
             enter_confirm_visible: false,
+            advance_scene: false,
         })
     }
 }
@@ -179,14 +209,17 @@ impl Drawable for SettingsScene {
 }
 impl Scene for SettingsScene {
     fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {
-        // Will always be the case (for now)
-        self.options[self.selected_option].handle_input(c)
+        // Will always be the case (for now). We don't want spaces.
+        // This is not the best solution, but it is a solution.
+        if c != ' ' {
+            self.options[self.selected_option].handle_input(c)
+        }
     }
     fn handle_key_event(
         &mut self,
-        _ctx: &mut ggez::Context,
+        ctx: &mut ggez::Context,
         key_input: ggez::input::keyboard::KeyInput,
-        repeat: bool,
+        _repeat: bool,
     ) {
         if let Some(vkeycode) = key_input.keycode {
             let old_option = self.selected_option;
@@ -201,6 +234,19 @@ impl Scene for SettingsScene {
                         self.selected_option += 1;
                     }
                 }
+                KeyCode::Return => {
+                    let mut valid_inputs = true;
+                    for option in &mut self.options {
+                        // Always unwrap since all of them are input boxes
+                        if option.get_input_value().unwrap().is_empty() {
+                            valid_inputs = false
+                        }
+                    }
+                    if valid_inputs {
+                        self.save_configuration(ctx)
+                            .expect("Failed to save configuration");
+                    }
+                }
                 _ => {}
             }
 
@@ -212,7 +258,13 @@ impl Scene for SettingsScene {
     }
 
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {
-        None
+        if self.advance_scene {
+            Some(Box::new(
+                GameMenu::new(ctx).expect("Failed to create game menu"),
+            ))
+        } else {
+            None
+        }
     }
 
     fn draw_transition(

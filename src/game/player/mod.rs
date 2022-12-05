@@ -49,12 +49,12 @@ impl Player {
         bincode::serialize_into(save_file, self)
             .map_err(|_| ggez::GameError::FilesystemError("Failed to save player.dat".to_string()))
     }
-    pub fn new(username: String) -> Self {
+    pub fn new(username: String, player_settings: PlayerSettings) -> Self {
         Self {
             id: Uuid::new_v4(),
             username,
             completed_puzzles: BTreeMap::new(),
-            player_settings: PlayerSettings { num_rows_cols: 3 },
+            player_settings,
         }
     }
 }
