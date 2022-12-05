@@ -71,6 +71,43 @@ impl SettingsScene {
             ..title_fragment.clone()
         });
         let w_sz = welcome.measure(ctx)?;
+        let opt_player = PLAYER.lock().unwrap();
+        let mut options = vec![
+            GameMenuItem::new_input_item(
+                ctx,
+                "Username",
+                if let Some(player) = opt_player.as_ref() {
+                    println!("{}", player.username);
+                    player.username.clone()
+                } else {
+                    "".to_string()
+                },
+                false,
+                // Will never get called
+                Box::new(|_| panic!()),
+                0.0,
+                0.0, // Doesn't matter
+                w_sz.x,
+                INPUT_BOX_HEIGHT,
+            )?,
+            GameMenuItem::new_input_item(
+                ctx,
+                "Board Size",
+                if let Some(player) = opt_player.as_ref() {
+                    format!("{}", player.player_settings.num_rows_cols)
+                } else {
+                    "".to_string()
+                },
+                true,
+                // Will never get called
+                Box::new(|_| panic!()),
+                0.0,
+                0.0, // Doesn't matter
+                w_sz.x,
+                INPUT_BOX_HEIGHT,
+            )?,
+        ];
+        options[0].select();
         Ok(SettingsScene {
             intro,
             intro_animation: keyframes![
@@ -78,30 +115,7 @@ impl SettingsScene {
                 (90.0, 1.0, EaseInOut),
                 (90.0, 2.0, EaseInOut)
             ],
-            options: vec![
-                GameMenuItem::new_input_item(
-                    ctx,
-                    "Username",
-                    false,
-                    // Will never get called
-                    Box::new(|_| panic!()),
-                    0.0,
-                    0.0, // Doesn't matter
-                    w_sz.x,
-                    INPUT_BOX_HEIGHT,
-                )?,
-                GameMenuItem::new_input_item(
-                    ctx,
-                    "Board Size",
-                    true,
-                    // Will never get called
-                    Box::new(|_| panic!()),
-                    0.0,
-                    0.0, // Doesn't matter
-                    w_sz.x,
-                    INPUT_BOX_HEIGHT,
-                )?,
-            ],
+            options,
             greeting_visible: false,
             greeting: Text::new(TextFragment {
                 text: "Hi!".to_string(),
@@ -203,6 +217,28 @@ impl Drawable for SettingsScene {
                     )
                 }
             }
+        } else {
+            canvas.draw(&self.main, Vec2::new(90.0, 90.0));
+
+            for i in 0..self.options.len() {
+                // This should be done earlier
+                self.options[i].y = self.greeting.measure(ctx)?.y
+                    + self.welcome.measure(ctx)?.y
+                    + 100.0
+                    + ((INPUT_BOX_HEIGHT + 20.0) * i as f32);
+                self.options[i].x = 90.0;
+                self.options[i].draw(ctx, canvas)?;
+            }
+
+            canvas.draw(
+                &self.enter_confirm,
+                Vec2::new(
+                    90.0,
+                    self.main.measure(ctx)?.y
+                        + 200.0
+                        + ((INPUT_BOX_HEIGHT + 20.0) * self.options.len() as f32),
+                ),
+            )
         }
         Ok(())
     }

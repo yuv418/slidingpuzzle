@@ -53,7 +53,7 @@ pub fn main() -> GameResult {
         match loaded_player {
             Err(_) => true,
             Ok(p) => {
-                println!("{:?}", p);
+                *opt_player = Some(p);
                 false
             }
         }

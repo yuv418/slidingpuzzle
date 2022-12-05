@@ -4,6 +4,7 @@ use self::menu_item::GameMenuItem;
 use self::puzzle_listing::PuzzleListing;
 
 use super::drawable::Drawable as SlidingPuzzleDrawable;
+use super::player::settings_scene::SettingsScene;
 use super::player::{self, Player};
 use super::scene::Scene;
 use super::tiles::TileState;
@@ -96,7 +97,12 @@ impl GameMenu {
             GameMenuItem::new_text_item(
                 ctx,
                 "Settings",
-                Box::new(next_page),
+                Box::new(|context: &mut Context| {
+                    Box::new(
+                        SettingsScene::new(context, false)
+                            .expect("Failed to create settings scene"),
+                    )
+                }),
                 90.0,
                 110.0 + tx_s.y + 200.0,
                 tx_s.x,

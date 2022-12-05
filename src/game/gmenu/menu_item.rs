@@ -83,6 +83,7 @@ impl GameMenuItem {
     pub fn new_input_item(
         ctx: &mut Context,
         prompt: &str,
+        initial_value: String,
         is_num: bool,
         next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
         x: f32,
@@ -103,7 +104,7 @@ impl GameMenuItem {
             GameMenuItemVariant::InputItem {
                 prompt_mesh,
                 is_num,
-                text: "".to_string(),
+                text: initial_value,
                 text_highlight_rect: Mesh::new_rounded_rectangle(
                     ctx,
                     DrawMode::fill(),
