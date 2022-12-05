@@ -286,6 +286,10 @@ impl Scene for SettingsScene {
                             .expect("Failed to save configuration");
                     }
                 }
+                KeyCode::Escape => {
+                    // Don't save anything
+                    self.advance_scene = true;
+                }
                 _ => {}
             }
 

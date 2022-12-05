@@ -48,6 +48,8 @@ pub struct TileState {
     total_moves: u32,
     timer: Option<TimeContext>,
 
+    game_cancelled: bool,
+
     pub x: f32,
     pub y: f32,
 }
@@ -86,6 +88,7 @@ impl TileState {
             img_num,
             total_moves: 0,
             timer: None,
+            game_cancelled: false,
             x: 0.0,
             y: 0.0,
         };
@@ -286,6 +289,7 @@ impl Scene for TileState {
     fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, repeat: bool) {
         let i = self.blank_cell.0;
         let j = self.blank_cell.1;
+        // TODO how do we make escape callable during animation?
         if !repeat && !self.game_completed() && self.game_started {
             // TODO make this DRYer
             if let Some(vkeycode) = key_input.keycode {
@@ -317,6 +321,9 @@ impl Scene for TileState {
                             self.swap_ref_tiles((i, j), (i, j - 1), TILE_SLIDE_DURATION);
                             self.total_moves += 1;
                         }
+                    }
+                    VirtualKeyCode::Escape => {
+                        self.game_cancelled = true;
                     }
                     _ => {}
                 }
@@ -350,7 +357,9 @@ impl Scene for TileState {
                 }
                 player.save(ctx).expect("Failed to save player statistics");
             }
+        }
 
+        if (self.game_completed() && self.current_animation.is_none()) || self.game_cancelled {
             Some(Box::new(
                 PuzzleListing::new(ctx, 4 * ((self.img_num) / 4))
                     .expect("Failed to return to puzzle listing"),
@@ -363,8 +372,17 @@ impl Scene for TileState {
     fn draw_transition(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
         for i in 0..self.ref_board.len() {
             for j in 0..self.ref_board[i].len() {
-                let mut tile = self.tiles[i][j].borrow_mut();
-                tile.draw(ctx, canvas)?;
+                let tile = if !self.game_cancelled {
+                    &self.tiles[i][j]
+                } else {
+                    if let Some(tile) = &self.ref_board[i][j] {
+                        tile
+                    } else {
+                        continue;
+                    }
+                };
+                let mut draw_tile = tile.borrow_mut();
+                draw_tile.draw(ctx, canvas)?;
             }
         }
         Ok(())
