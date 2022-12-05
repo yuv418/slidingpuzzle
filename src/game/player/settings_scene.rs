@@ -77,7 +77,6 @@ impl SettingsScene {
                 ctx,
                 "Username",
                 if let Some(player) = opt_player.as_ref() {
-                    println!("{}", player.username);
                     player.username.clone()
                 } else {
                     "".to_string()
@@ -107,7 +106,11 @@ impl SettingsScene {
                 INPUT_BOX_HEIGHT,
             )?,
         ];
-        options[0].select();
+
+        if !intro {
+            options[0].select();
+        }
+
         Ok(SettingsScene {
             intro,
             intro_animation: keyframes![
