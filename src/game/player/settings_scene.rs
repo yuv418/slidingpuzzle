@@ -272,7 +272,7 @@ impl Scene for SettingsScene {
         ctx: &mut ggez::Context,
         canvas: &mut ggez::graphics::Canvas,
     ) -> ggez::GameResult {
-        if !self.intro {
+        if !self.intro || self.advance_scene {
             self.draw(ctx, canvas)?;
         }
         Ok(())
