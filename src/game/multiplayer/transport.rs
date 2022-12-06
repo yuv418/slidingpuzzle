@@ -109,6 +109,7 @@ impl MultiplayerTransport {
                 Box::pin(async move {})
             }));
             tokio::spawn(async move { Self::channel_push_handler(rx_c, channel).await });
+            // Add a listener to set the remote description for the peer
         } else {
             let json = base64::decode(conn_string.unwrap()).map_err(|_| {
                 GameError::ConfigError("Failed to decode base64 conn string".to_string())
@@ -162,8 +163,7 @@ impl MultiplayerTransport {
             ));
         };
 
-        tx.send_async(MultiplayerGameMessage::ConnectionString(base64_conn_str))
-            .await
+        tx.send(MultiplayerGameMessage::ConnectionString(base64_conn_str))
             .map_err(|_| GameError::CustomError("Failed to send the conn str to tx".to_string()))?;
 
         Ok(())
@@ -177,7 +177,10 @@ impl MultiplayerTransport {
 
         let (tx, rx) = flume::unbounded::<MultiplayerGameMessage>();
         let (push_tx, push_rx) = flume::unbounded::<MultiplayerGameMessage>();
-        rt.spawn(Self::create_game_async(conn_string, push_tx, rx));
+        std::thread::spawn(move || {
+            rt.block_on(Self::create_game_async(conn_string, push_tx, rx))
+                .unwrap();
+        });
 
         Ok(Self {
             event_buffer: push_rx,
