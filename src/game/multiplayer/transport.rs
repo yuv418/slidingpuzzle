@@ -8,8 +8,8 @@ use webrtc::{
     ice_transport::ice_server::RTCIceServer,
     interceptor::registry::Registry,
     peer_connection::{
-        configuration::RTCConfiguration, sdp::session_description::RTCSessionDescription,
-        RTCPeerConnection,
+        configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
+        sdp::session_description::RTCSessionDescription, RTCPeerConnection,
     },
 };
 
@@ -138,6 +138,12 @@ impl MultiplayerTransport {
             // Add a listener to set the remote description for the peer
             Some(channel)
         } else {
+            peer_conn.on_peer_connection_state_change(Box::new(
+                move |s: RTCPeerConnectionState| {
+                    println!("Peer Connection State has changed: {}", s);
+                    Box::pin(async {})
+                },
+            ));
             peer_conn.on_data_channel(Box::new(move |channel: Arc<RTCDataChannel>| {
                 println!("New channel made {}", channel.label());
                 if channel.label() == "MultiplayerGameData" {
@@ -205,6 +211,9 @@ impl MultiplayerTransport {
                 println!("peer conn has set remote desc");
             }
             Self::channel_push_handler(rx, channel.unwrap()).await;
+        } else {
+            // Please change this; this is a hack
+            while true {}
         }
 
         Ok(())
