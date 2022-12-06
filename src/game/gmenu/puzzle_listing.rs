@@ -180,8 +180,16 @@ impl Scene for PuzzleListing {
                     )
                 } else {
                     Box::new(
-                        TileState::new(ctx, game_image_num, player.player_settings.num_rows_cols)
-                            .expect("Failed to create tile state"),
+                        TileState::new(
+                            ctx,
+                            game_image_num,
+                            player.player_settings.num_rows_cols,
+                            0.0,
+                            0.0,
+                            None,
+                            false,
+                        )
+                        .expect("Failed to create tile state"),
                     )
                 },
             );

@@ -54,6 +54,10 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
                 0
             },
             player.player_settings.num_rows_cols,
+            0.0,
+            0.0,
+            None,
+            false,
         )
         .expect("Failed to create TileState"),
     );

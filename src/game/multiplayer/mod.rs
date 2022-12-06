@@ -1,11 +1,22 @@
 use serde::{Deserialize, Serialize};
 
+pub mod game_view;
 pub mod join_scene;
 pub mod transport;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum MultiplayerGameMessage {
     ConnectionString(String),
     Hello,
     CloseConnection,
+    DeleteRandomTile((usize, usize)),
+    StartGame {
+        img_num: usize,
+        num_rows_cols: usize,
+    },
+    SwapTiles {
+        i1j1: (usize, usize),
+        i2j2: (usize, usize),
+        duration: f32,
+    },
 }

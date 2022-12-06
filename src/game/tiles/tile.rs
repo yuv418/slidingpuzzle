@@ -28,18 +28,18 @@ pub struct TilePosition {
 }
 
 impl TilePosition {
-    pub fn from_ij(i: usize, j: usize, tile_size: u32) -> Self {
+    pub fn from_ij(i: usize, j: usize, tile_size: u32, off_x: f32, off_y: f32) -> Self {
         TilePosition {
-            x: TILE_PADDING_X + (j as f32 * (tile_size as f32 + TILE_GAP)),
-            y: TILE_PADDING_Y + (i as f32 * (tile_size as f32 + TILE_GAP)),
+            x: off_x + TILE_PADDING_X + (j as f32 * (tile_size as f32 + TILE_GAP)),
+            y: off_y + TILE_PADDING_Y + (i as f32 * (tile_size as f32 + TILE_GAP)),
         }
     }
 
     // For when the game is completed
-    pub fn from_ij_no_gap(i: usize, j: usize, tile_size: u32) -> Self {
+    pub fn from_ij_no_gap(i: usize, j: usize, tile_size: u32, off_x: f32, off_y: f32) -> Self {
         TilePosition {
-            x: TILE_GAP + TILE_PADDING_X + (j as f32 * (tile_size as f32)),
-            y: TILE_GAP + TILE_PADDING_Y + (i as f32 * (tile_size as f32)),
+            x: off_x + TILE_GAP + TILE_PADDING_X + (j as f32 * (tile_size as f32)),
+            y: off_y + TILE_GAP + TILE_PADDING_Y + (i as f32 * (tile_size as f32)),
         }
     }
 }

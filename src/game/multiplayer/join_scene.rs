@@ -12,10 +12,13 @@ use ggez::{
     winit::{event::VirtualKeyCode, platform::unix::x11::ffi::KeyCode},
     Context, GameError, GameResult,
 };
+use log::info;
 
-use crate::game::{drawable::Drawable, scene::Scene};
+use crate::game::{drawable::Drawable, player::PLAYER, scene::Scene, tiles::TileState};
 
-use super::{transport::MultiplayerTransport, MultiplayerGameMessage};
+use super::{
+    game_view::MultiplayerGameView, transport::MultiplayerTransport, MultiplayerGameMessage,
+};
 
 pub struct JoinMultiplayerScene {
     connecting: bool,
@@ -26,6 +29,7 @@ pub struct JoinMultiplayerScene {
     transport: Option<MultiplayerTransport>,
     clipboard: Clipboard,
     puzzle_num: usize,
+    game_started: Option<MultiplayerGameMessage>,
 }
 
 impl JoinMultiplayerScene {
@@ -60,6 +64,7 @@ impl JoinMultiplayerScene {
             } else {
                 None
             },
+            game_started: None,
         })
     }
 }
@@ -94,6 +99,22 @@ impl Drawable for JoinMultiplayerScene {
 }
 
 impl Scene for JoinMultiplayerScene {
+    fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
+        if let Some(MultiplayerGameMessage::StartGame {
+            img_num,
+            num_rows_cols,
+        }) = self.game_started
+        {
+            let transport = self.transport.take().unwrap();
+            Some(Box::new(
+                MultiplayerGameView::new(ctx, transport, img_num, num_rows_cols)
+                    .expect("Failed to create multiplayer game view"),
+            ))
+        } else {
+            None
+        }
+    }
+
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
         if let Some(transport) = &self.transport {
             if let Ok(event) = transport.event_buffer.try_recv() {
@@ -112,8 +133,27 @@ impl Scene for JoinMultiplayerScene {
                         }));
                         self.connecting = true;
                     }
-                    MultiplayerGameMessage::CloseConnection => todo!(),
-                    MultiplayerGameMessage::Hello => println!("Hello recv"),
+                    MultiplayerGameMessage::Hello => {
+                        info!("Hello recv, starting game");
+                        let opt_player = PLAYER.lock().unwrap();
+                        let player = opt_player.as_ref().unwrap();
+
+                        self.game_started = Some(MultiplayerGameMessage::StartGame {
+                            img_num: self.puzzle_num,
+                            num_rows_cols: player.player_settings.num_rows_cols,
+                        });
+                        self.transport
+                            .as_ref()
+                            .unwrap()
+                            .event_push_buffer
+                            .send(self.game_started.as_ref().unwrap().clone());
+                    }
+                    MultiplayerGameMessage::StartGame { .. } => {
+                        self.game_started = Some(event.clone());
+                    }
+                    _ => {
+                        println!("recv from channel {:?}", event)
+                    }
                 }
             }
         }
@@ -151,14 +191,14 @@ impl Scene for JoinMultiplayerScene {
                     } else {
                         self.transport =
                             Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
-                    }
 
-                    self.transport
-                        .as_ref()
-                        .unwrap()
-                        .event_push_buffer
-                        .send(MultiplayerGameMessage::Hello)
-                        .unwrap();
+                        self.transport
+                            .as_ref()
+                            .unwrap()
+                            .event_push_buffer
+                            .send(MultiplayerGameMessage::Hello)
+                            .unwrap();
+                    }
                 }
                 _ => {}
             }

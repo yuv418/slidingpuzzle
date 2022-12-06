@@ -14,6 +14,7 @@ use webrtc::{
         configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
         sdp::session_description::RTCSessionDescription, RTCPeerConnection,
     },
+    Error,
 };
 
 use super::MultiplayerGameMessage;
@@ -63,13 +64,13 @@ impl MultiplayerTransport {
     //
     // Clients can use the flume queue to communicate with the peer
 
-    fn channel_msg_handler(
+    async fn channel_msg_handler(
         msg: DataChannelMessage,
         tx: Arc<flume::Sender<MultiplayerGameMessage>>,
     ) {
         if let Ok(msg_decode) = bincode::deserialize::<MultiplayerGameMessage>(&msg.data) {
-            println!("Message from game data channel {:#?}", msg_decode);
-            if let Err(e) = tx.send(msg_decode) {
+            println!("Channel msg handled {:?}", msg_decode);
+            if let Err(e) = tx.send_async(msg_decode).await {
                 println!("Failed to send event to event buffer {:?}", e);
             }
         }
@@ -80,18 +81,11 @@ impl MultiplayerTransport {
         exit_tx: flume::Sender<bool>,
         channel: Arc<RTCDataChannel>,
     ) {
-        let mut ready = false;
-        while !ready {
-            match channel.ready_state() {
-                RTCDataChannelState::Open => ready = true,
-                _ => {}
-            }
-        }
-        while let Ok(msg) = push_rx.recv() {
-            println!("msg {:?}", msg);
+        while let Ok(msg) = push_rx.recv_async().await {
             if let Ok(ser_msg) = bincode::serialize(&msg) {
-                if let Err(e) = channel.send(&bytes::Bytes::from(ser_msg)).await {
-                    println!("Failed to send event to peer {:?}", e);
+                match channel.send(&bytes::Bytes::from(ser_msg)).await {
+                    Err(e) => println!("Failed to send event to peer {:?}", e),
+                    Ok(k) => println!("Sent data to peer with size {:?}", k),
                 }
                 if let MultiplayerGameMessage::CloseConnection = msg {
                     exit_tx.send(true).unwrap();
@@ -143,44 +137,69 @@ impl MultiplayerTransport {
             channel.on_open(Box::new(move || {
                 println!("Data channel open!");
 
-                Box::pin(async move {})
+                Box::pin(async move {
+                    Self::channel_push_handler(rx_cc, tx_exit, channel_c.clone()).await;
+                })
             }));
 
             // Register handlers
             channel.on_message(Box::new(move |msg: DataChannelMessage| {
-                Self::channel_msg_handler(msg, tx_c.clone());
-                Box::pin(async move {})
+                let tx_cc = tx_c.clone();
+                println!("Message handler triggered");
+                Box::pin(async move { Self::channel_msg_handler(msg, tx_cc.clone()).await })
             }));
 
-            let peer_conn_c = peer_conn.clone();
+            channel.on_error(Box::new(move |msg: Error| {
+                println!("channel err {:?}", msg);
+                Box::pin(async move {})
+            }));
+            channel.on_close(Box::new(move || {
+                println!("channel close");
+                Box::pin(async move {})
+            }));
             // Add a listener to set the remote description for the peer
             Some(channel)
         } else {
-            peer_conn.on_peer_connection_state_change(Box::new(
-                move |s: RTCPeerConnectionState| {
-                    println!("Peer Connection State has changed: {}", s);
-                    Box::pin(async {})
-                },
-            ));
             peer_conn.on_data_channel(Box::new(move |channel: Arc<RTCDataChannel>| {
-                println!("New channel made {}", channel.label());
+                println!("New channel found {}", channel.label());
                 if channel.label() == "MultiplayerGameData" {
                     let tx_cc = tx_c.clone();
                     // Register handlers
                     channel.on_message(Box::new(move |msg: DataChannelMessage| {
-                        Self::channel_msg_handler(msg, tx_cc.clone());
+                        let tx_ccc = tx_cc.clone();
+                        Box::pin(async move {
+                            Self::channel_msg_handler(msg, tx_ccc.clone()).await;
+                        })
+                    }));
+
+                    channel.on_error(Box::new(move |msg: Error| {
+                        println!("channel err {:?}", msg);
                         Box::pin(async move {})
                     }));
+                    channel.on_close(Box::new(move || {
+                        println!("channel close");
+                        Box::pin(async move {})
+                    }));
+
                     let rx_cc = rx_c.clone();
                     let txe_cc = txe_c.clone();
-                    tokio::spawn(async move {
-                        Self::channel_push_handler(rx_cc.clone(), txe_cc, channel).await
-                    });
+                    let channel_c = channel.clone();
+
+                    channel.on_open(Box::new(move || {
+                        println!("Channel opened");
+                        Box::pin(async move {
+                            Self::channel_push_handler(rx_cc.clone(), txe_cc, channel_c).await;
+                        })
+                    }));
                 }
                 Box::pin(async move {})
             }));
             None
         };
+        peer_conn.on_peer_connection_state_change(Box::new(move |s: RTCPeerConnectionState| {
+            println!("Peer Connection State has changed: {}", s);
+            Box::pin(async {})
+        }));
 
         let offer = if let Some(c_s) = &conn_string {
             let offer = Self::session_desc_from_str::<RTCSessionDescription>(c_s.to_string())?;
@@ -229,10 +248,9 @@ impl MultiplayerTransport {
                     .expect("Failed to set remote description");
                 println!("peer conn has set remote desc");
             }
-            Self::channel_push_handler(rx, tx_exit, channel.unwrap()).await;
-        } else {
-            if let Ok(true) = rx_exit.recv_async().await {}
         }
+        if let Ok(true) = rx_exit.recv() {}
+        println!("Event thread exiting");
 
         Ok(())
     }
