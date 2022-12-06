@@ -1,6 +1,6 @@
 use chrono::Local;
 use image::{imageops::FilterType, io::Reader as ImageReader, GenericImageView, Pixel};
-use log::trace;
+use log::{info, trace};
 use rand::Rng;
 use std::{cell::RefCell, io::BufReader, rc::Rc, sync::Arc};
 
@@ -195,11 +195,17 @@ impl TileState {
             .gfx
             .set_mode(
                 ggez::conf::WindowMode::default()
-                    .dimensions(win_width, win_height)
+                    .dimensions(
+                        if let None = tile_state.transport {
+                            win_width
+                        } else {
+                            (win_width * 2.0) + 100.0
+                        },
+                        win_height,
+                    )
                     .resizable(true),
             )
             .expect("Failed to resize window for tile game");
-
         tile_state.timer = Some(TimeContext::new());
 
         Ok(tile_state)
@@ -256,6 +262,7 @@ impl TileState {
                 }
             }
         }
+
         self.game_completed = true
     }
 
@@ -335,6 +342,23 @@ impl TileState {
             self.swap_ref_tiles(self.blank_cell, tile2, 0.15)
         }
     }
+
+    pub fn get_puzzle_statistics(&self) -> PuzzleStatistics {
+        PuzzleStatistics {
+            finish_time: Local::now(),
+            duration: self.timer.as_ref().unwrap().time_since_start(),
+            move_count: self.total_moves,
+        }
+    }
+    fn fix_missing_tile(&mut self) {
+        // Fix the missing tile
+        let tile = &self.tiles[self.blank_cell.0][self.blank_cell.1];
+        let side_len = { tile.as_ref().borrow().side_len };
+        let (m_x, m_y) = self.tile_blank_cell;
+        self.tiles[m_x][m_y].as_ref().borrow_mut().pos =
+            TilePosition::from_ij(m_x, m_y, side_len, self.x, self.y);
+        self.game_started = true;
+    }
 }
 impl Scene for TileState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
@@ -355,14 +379,7 @@ impl Scene for TileState {
                                         self.total_tiles_swapped += 1;
                                     }
                                     if self.total_tiles_swapped == TOTAL_SCRAMBLE_SWAPS {
-                                        let (i, j) = self.blank_cell;
-                                        let tile = &self.tiles[i][j];
-                                        let side_len = { tile.as_ref().borrow().side_len };
-                                        let (m_x, m_y) = self.tile_blank_cell;
-                                        self.tiles[m_x][m_y].as_ref().borrow_mut().pos =
-                                            TilePosition::from_ij(
-                                                m_x, m_y, side_len, self.x, self.y,
-                                            );
+                                        self.fix_missing_tile();
                                         self.game_started = true;
                                     }
                                 }
@@ -370,6 +387,10 @@ impl Scene for TileState {
                                     self.ref_board[i][j] = None;
                                     self.tile_blank_cell = (i, j);
                                     self.blank_cell = (i, j);
+                                }
+                                MultiplayerGameMessage::GameCompleted(..) => {
+                                    println!("Game completed, sending to peer");
+                                    self.game_completed = true
                                 }
                                 _ => {}
                             }
@@ -425,6 +446,13 @@ impl Scene for TileState {
             }
             // TODO move this to the update method
             self.check_completed();
+            if !self.peer && self.game_completed() {
+                if let Err(e) = self.transport.as_ref().unwrap().event_push_buffer.send(
+                    MultiplayerGameMessage::GameCompleted(self.get_puzzle_statistics()),
+                ) {
+                    println!("Failed to send game completed {:?}", e);
+                }
+            }
         }
     }
 
@@ -437,12 +465,9 @@ impl Scene for TileState {
                 let mut opt_player = PLAYER.lock().unwrap();
                 let player = opt_player.as_mut().unwrap();
 
-                let game_stat = PuzzleStatistics {
-                    finish_time: Local::now(),
-                    duration: self.timer.as_ref().unwrap().time_since_start(),
-                    move_count: self.total_moves,
-                };
+                let game_stat = self.get_puzzle_statistics();
 
+                // TODO do we really want this? Should multiplayer stats get saved separately?
                 if let Some(statistics) = player.completed_puzzles.get_mut(&self.img_num) {
                     statistics.push(game_stat);
                 } else {
@@ -451,6 +476,9 @@ impl Scene for TileState {
                         .insert(self.img_num, vec![game_stat]);
                 }
                 player.save(ctx).expect("Failed to save player statistics");
+                if let Some(transport) = &self.transport {
+                } else {
+                }
             }
         }
 
@@ -536,13 +564,7 @@ impl Drawable for TileState {
                                 self.swap_random_tile_blank();
                                 self.total_tiles_swapped += 1;
                             } else if self.total_tiles_swapped == TOTAL_SCRAMBLE_SWAPS {
-                                // Fix the missing tile
-                                let tile = &self.tiles[i][j];
-                                let side_len = { tile.as_ref().borrow().side_len };
-                                let (m_x, m_y) = self.tile_blank_cell;
-                                self.tiles[m_x][m_y].as_ref().borrow_mut().pos =
-                                    TilePosition::from_ij(m_x, m_y, side_len, self.x, self.y);
-                                self.game_started = true;
+                                self.fix_missing_tile();
                             }
                         }
                         if let Some(tile) = &self.ref_board[i][j] {

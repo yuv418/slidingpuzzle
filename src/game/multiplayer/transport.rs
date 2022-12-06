@@ -146,7 +146,6 @@ impl MultiplayerTransport {
             // Register handlers
             channel.on_message(Box::new(move |msg: DataChannelMessage| {
                 let tx_cc = tx_c.clone();
-                println!("Message handler triggered");
                 Box::pin(async move { Self::channel_msg_handler(msg, tx_cc.clone()).await })
             }));
 

@@ -23,7 +23,7 @@ pub struct PlayerSettings {
     pub num_rows_cols: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PuzzleStatistics {
     pub finish_time: DateTime<Local>,
     pub duration: Duration,

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::player::PuzzleStatistics;
+
 pub mod game_view;
 pub mod join_scene;
 pub mod transport;
@@ -19,4 +21,5 @@ pub enum MultiplayerGameMessage {
         i2j2: (usize, usize),
         duration: f32,
     },
+    GameCompleted(PuzzleStatistics),
 }
