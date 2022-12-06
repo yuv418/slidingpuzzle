@@ -1,5 +1,6 @@
 use chrono::Local;
 use image::{imageops::FilterType, io::Reader as ImageReader, GenericImageView, Pixel};
+use log::trace;
 use rand::Rng;
 use std::{cell::RefCell, io::BufReader, rc::Rc, sync::Arc};
 
@@ -342,15 +343,15 @@ impl Scene for TileState {
                 if self.current_animation.is_none() {
                     match transport.event_buffer.try_recv() {
                         Ok(msg) => {
-                            println!("recv tile msg {:?}", msg);
+                            trace!("recv tile msg {:?}", msg);
                             match msg {
                                 MultiplayerGameMessage::SwapTiles {
                                     i1j1,
                                     i2j2,
                                     duration,
                                 } => {
+                                    self.swap_ref_tiles(i1j1, i2j2, duration);
                                     if !self.game_started {
-                                        self.swap_ref_tiles(i1j1, i2j2, duration);
                                         self.total_tiles_swapped += 1;
                                     }
                                     if self.total_tiles_swapped == TOTAL_SCRAMBLE_SWAPS {

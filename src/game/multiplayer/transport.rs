@@ -1,6 +1,7 @@
 use std::{pin::Pin, sync::Arc};
 
 use ggez::{GameError, GameResult};
+use log::trace;
 use serde::{de::DeserializeOwned, Deserialize};
 use webrtc::{
     api::{interceptor_registry, media_engine::MediaEngine, APIBuilder},
@@ -69,7 +70,7 @@ impl MultiplayerTransport {
         tx: Arc<flume::Sender<MultiplayerGameMessage>>,
     ) {
         if let Ok(msg_decode) = bincode::deserialize::<MultiplayerGameMessage>(&msg.data) {
-            println!("Channel msg handled {:?}", msg_decode);
+            trace!("Channel msg handled {:?}", msg_decode);
             if let Err(e) = tx.send_async(msg_decode).await {
                 println!("Failed to send event to event buffer {:?}", e);
             }
@@ -85,7 +86,7 @@ impl MultiplayerTransport {
             if let Ok(ser_msg) = bincode::serialize(&msg) {
                 match channel.send(&bytes::Bytes::from(ser_msg)).await {
                     Err(e) => println!("Failed to send event to peer {:?}", e),
-                    Ok(k) => println!("Sent data to peer with size {:?}", k),
+                    Ok(k) => trace!("Sent data to peer with size {:?}", k),
                 }
                 if let MultiplayerGameMessage::CloseConnection = msg {
                     exit_tx.send(true).unwrap();
