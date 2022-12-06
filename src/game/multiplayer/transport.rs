@@ -4,7 +4,10 @@ use ggez::{GameError, GameResult};
 use serde::{de::DeserializeOwned, Deserialize};
 use webrtc::{
     api::{interceptor_registry, media_engine::MediaEngine, APIBuilder},
-    data_channel::{data_channel_message::DataChannelMessage, RTCDataChannel},
+    data_channel::{
+        data_channel_message::DataChannelMessage, data_channel_state::RTCDataChannelState,
+        RTCDataChannel,
+    },
     ice_transport::ice_server::RTCIceServer,
     interceptor::registry::Registry,
     peer_connection::{
@@ -74,13 +77,25 @@ impl MultiplayerTransport {
 
     async fn channel_push_handler(
         push_rx: Arc<flume::Receiver<MultiplayerGameMessage>>,
+        exit_tx: flume::Sender<bool>,
         channel: Arc<RTCDataChannel>,
     ) {
+        let mut ready = false;
+        while !ready {
+            match channel.ready_state() {
+                RTCDataChannelState::Open => ready = true,
+                _ => {}
+            }
+        }
         while let Ok(msg) = push_rx.recv() {
             println!("msg {:?}", msg);
             if let Ok(ser_msg) = bincode::serialize(&msg) {
                 if let Err(e) = channel.send(&bytes::Bytes::from(ser_msg)).await {
                     println!("Failed to send event to peer {:?}", e);
+                }
+                if let MultiplayerGameMessage::CloseConnection = msg {
+                    exit_tx.send(true).unwrap();
+                    return;
                 }
             }
         }
@@ -110,6 +125,9 @@ impl MultiplayerTransport {
         let (tx, rx) = (Arc::new(tx), Arc::new(rx));
         let tx_c = tx.clone();
         let rx_c = rx.clone();
+
+        let (tx_exit, rx_exit) = flume::bounded::<bool>(1);
+        let txe_c = tx_exit.clone();
 
         let channel = if conn_string.is_none() {
             let channel = peer_conn
@@ -154,8 +172,9 @@ impl MultiplayerTransport {
                         Box::pin(async move {})
                     }));
                     let rx_cc = rx_c.clone();
+                    let txe_cc = txe_c.clone();
                     tokio::spawn(async move {
-                        Self::channel_push_handler(rx_cc.clone(), channel).await
+                        Self::channel_push_handler(rx_cc.clone(), txe_cc, channel).await
                     });
                 }
                 Box::pin(async move {})
@@ -210,10 +229,9 @@ impl MultiplayerTransport {
                     .expect("Failed to set remote description");
                 println!("peer conn has set remote desc");
             }
-            Self::channel_push_handler(rx, channel.unwrap()).await;
+            Self::channel_push_handler(rx, tx_exit, channel.unwrap()).await;
         } else {
-            // Please change this; this is a hack
-            while true {}
+            if let Ok(true) = rx_exit.recv_async().await {}
         }
 
         Ok(())
