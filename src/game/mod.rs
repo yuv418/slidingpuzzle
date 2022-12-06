@@ -73,6 +73,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 ]);
             }
         }
+        self.current_scene.update(ctx)?;
         Ok(())
     }
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult {

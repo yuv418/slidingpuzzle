@@ -4,4 +4,6 @@ pub mod join_scene;
 pub mod transport;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct MultiplayerGameMessage {}
+pub enum MultiplayerGameMessage {
+    ConnectionString(String),
+}

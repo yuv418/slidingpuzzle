@@ -151,6 +151,7 @@ impl MultiplayerTransport {
 
         g_c.recv().await;
 
+        // Push this into the tx
         let base64_conn_str = if let Some(l_d) = peer_conn.local_description().await {
             base64::encode(serde_json::to_string(&l_d).map_err(|e| {
                 GameError::CustomError("Failed to convert peer base64 to json".to_string())
@@ -160,6 +161,10 @@ impl MultiplayerTransport {
                 "Failed to get peer base64".to_string(),
             ));
         };
+
+        tx.send_async(MultiplayerGameMessage::ConnectionString(base64_conn_str))
+            .await
+            .map_err(|_| GameError::CustomError("Failed to send the conn str to tx".to_string()))?;
 
         Ok(())
     }

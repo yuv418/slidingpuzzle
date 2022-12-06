@@ -13,4 +13,7 @@ pub trait Scene: Drawable {
         self.draw(ctx, canvas)
     }
     fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {}
+    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        Ok(())
+    }
 }
