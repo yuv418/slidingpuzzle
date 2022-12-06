@@ -6,5 +6,6 @@ pub mod transport;
 #[derive(Serialize, Deserialize, Debug)]
 pub enum MultiplayerGameMessage {
     ConnectionString(String),
+    Hello,
     CloseConnection,
 }

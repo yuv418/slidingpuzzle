@@ -111,7 +111,7 @@ impl MultiplayerTransport {
         let tx_c = tx.clone();
         let rx_c = rx.clone();
 
-        if conn_string.is_none() {
+        let channel = if conn_string.is_none() {
             let channel = peer_conn
                 .create_data_channel("MultiplayerGameData", None)
                 .await
@@ -119,8 +119,12 @@ impl MultiplayerTransport {
                     GameError::CustomError("Failed to create a data channel".to_string())
                 })?;
 
+            let channel_c = channel.clone();
+            let rx_cc = rx_c.clone();
+
             channel.on_open(Box::new(move || {
                 println!("Data channel open!");
+
                 Box::pin(async move {})
             }));
 
@@ -130,22 +134,9 @@ impl MultiplayerTransport {
                 Box::pin(async move {})
             }));
 
-            let rx_cc = rx_c.clone();
             let peer_conn_c = peer_conn.clone();
             // Add a listener to set the remote description for the peer
-
-            tokio::spawn(async move {
-                if let Ok(MultiplayerGameMessage::ConnectionString(s)) = rx_cc.recv() {
-                    peer_conn_c
-                        .set_remote_description(
-                            Self::session_desc_from_str(s)
-                                .expect("Failed to parse remote description string"),
-                        )
-                        .await
-                        .expect("Failed to set remote description");
-                }
-                Self::channel_push_handler(rx_c, channel).await
-            });
+            Some(channel)
         } else {
             peer_conn.on_data_channel(Box::new(move |channel: Arc<RTCDataChannel>| {
                 println!("New channel made {}", channel.label());
@@ -163,7 +154,8 @@ impl MultiplayerTransport {
                 }
                 Box::pin(async move {})
             }));
-        }
+            None
+        };
 
         let offer = if let Some(c_s) = &conn_string {
             let offer = Self::session_desc_from_str::<RTCSessionDescription>(c_s.to_string())?;
@@ -197,10 +189,23 @@ impl MultiplayerTransport {
                 "Failed to get peer base64".to_string(),
             ));
         };
-        println!("base64_conn_str {}", base64_conn_str);
 
         tx.send(MultiplayerGameMessage::ConnectionString(base64_conn_str))
             .map_err(|_| GameError::CustomError("Failed to send the conn str to tx".to_string()))?;
+
+        if conn_string.is_none() {
+            if let Ok(MultiplayerGameMessage::ConnectionString(s)) = rx.recv() {
+                peer_conn
+                    .set_remote_description(
+                        Self::session_desc_from_str(s)
+                            .expect("Failed to parse remote description string"),
+                    )
+                    .await
+                    .expect("Failed to set remote description");
+                println!("peer conn has set remote desc");
+            }
+            Self::channel_push_handler(rx, channel.unwrap()).await;
+        }
 
         Ok(())
     }

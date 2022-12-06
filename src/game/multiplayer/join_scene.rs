@@ -113,6 +113,7 @@ impl Scene for JoinMultiplayerScene {
                         self.connecting = true;
                     }
                     MultiplayerGameMessage::CloseConnection => todo!(),
+                    MultiplayerGameMessage::Hello => println!("Hello recv"),
                 }
             }
         }
@@ -151,6 +152,13 @@ impl Scene for JoinMultiplayerScene {
                         self.transport =
                             Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
                     }
+
+                    self.transport
+                        .as_ref()
+                        .unwrap()
+                        .event_push_buffer
+                        .send(MultiplayerGameMessage::Hello)
+                        .unwrap();
                 }
                 _ => {}
             }
