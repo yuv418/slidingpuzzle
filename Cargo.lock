@@ -3609,6 +3609,7 @@ dependencies = [
 name = "slidingpuzzle"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "bincode",
  "bytes",
  "chrono",
@@ -3621,6 +3622,7 @@ dependencies = [
  "lazy_static",
  "rand",
  "serde",
+ "serde_json",
  "tokio",
  "uuid",
  "webrtc",
