@@ -7,7 +7,7 @@ edition = "2021"
 
 [features]
 default = [ "multiplayer" ]
-multiplayer = ["dep:webrtc", "dep:flume", "dep:tokio", "dep:bytes", "dep:base64", "dep:serde_json" ]
+multiplayer = ["dep:webrtc", "dep:flume", "dep:tokio", "dep:bytes", "dep:base64", "dep:serde_json", "dep:arboard" ]
 
 
 [dependencies]
@@ -18,6 +18,7 @@ tokio = { version = "1", optional = true }
 bytes = { version = "1", optional = true }
 base64 = { version = "0.13", optional = true }
 serde_json = { version =  "1", optional = true }
+arboard = { version =  "3", optional = true }
 
 
 ggez = "0.8"

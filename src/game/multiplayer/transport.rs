@@ -15,10 +15,8 @@ use webrtc::{
 use super::MultiplayerGameMessage;
 
 pub struct MultiplayerTransport {
-    peer_conn: Arc<RTCPeerConnection>,
-    pub event_buffer: Arc<flume::Receiver<MultiplayerGameMessage>>,
+    pub event_buffer: flume::Receiver<MultiplayerGameMessage>,
     pub event_push_buffer: flume::Sender<MultiplayerGameMessage>,
-    pub base64_conn_str: String,
 }
 
 // Largely borrowed from webrtc-rs examples
@@ -86,17 +84,18 @@ impl MultiplayerTransport {
         }
     }
 
-    async fn create_game_async(offer: RTCSessionDescription, creator: bool) -> GameResult<Self> {
+    async fn create_game_async(
+        conn_string: Option<String>,
+        tx: flume::Sender<MultiplayerGameMessage>,
+        rx: flume::Receiver<MultiplayerGameMessage>,
+    ) -> GameResult {
         let peer_conn = Self::setup().await?;
-
-        let (tx, rx) = flume::unbounded::<MultiplayerGameMessage>();
-        let (push_tx, push_rx) = flume::unbounded::<MultiplayerGameMessage>();
 
         let (tx, rx) = (Arc::new(tx), Arc::new(rx));
         let tx_c = tx.clone();
         let rx_c = rx.clone();
 
-        if creator {
+        if conn_string.is_none() {
             let channel = peer_conn
                 .create_data_channel("MultiplayerGameData", None)
                 .await
@@ -111,6 +110,18 @@ impl MultiplayerTransport {
             }));
             tokio::spawn(async move { Self::channel_push_handler(rx_c, channel).await });
         } else {
+            let json = base64::decode(conn_string.unwrap()).map_err(|_| {
+                GameError::ConfigError("Failed to decode base64 conn string".to_string())
+            })?;
+            let sd: RTCSessionDescription = serde_json::from_slice(&json).map_err(|_| {
+                GameError::ConfigError(
+                    "Failed to convert connection string to RTCSessionDescription".to_string(),
+                )
+            })?;
+            peer_conn.set_remote_description(sd).await.map_err(|_| {
+                GameError::CustomError("Failed to set description for peer".to_string())
+            })?;
+
             peer_conn.on_data_channel(Box::new(move |channel: Arc<RTCDataChannel>| {
                 if channel.label() == "MultiplayerGameData" {
                     let tx_cc = tx_c.clone();
@@ -127,6 +138,19 @@ impl MultiplayerTransport {
                 Box::pin(async move {})
             }));
         }
+
+        let offer = peer_conn
+            .create_offer(None)
+            .await
+            .map_err(|_| GameError::CustomError("Failed to create offer".to_string()))?;
+        let mut g_c = peer_conn.gathering_complete_promise().await;
+        peer_conn
+            .set_local_description(offer)
+            .await
+            .map_err(|_| GameError::CustomError("Failed to set local description".to_string()))?;
+
+        g_c.recv().await;
+
         let base64_conn_str = if let Some(l_d) = peer_conn.local_description().await {
             base64::encode(serde_json::to_string(&l_d).map_err(|e| {
                 GameError::CustomError("Failed to convert peer base64 to json".to_string())
@@ -137,29 +161,22 @@ impl MultiplayerTransport {
             ));
         };
 
-        Ok(Self {
-            peer_conn,
-            event_buffer: Arc::new(push_rx),
-            event_push_buffer: push_tx,
-            base64_conn_str,
-        })
+        Ok(())
     }
 
-    pub fn create_game(conn_string: String, connect: bool) -> GameResult<Self> {
+    pub fn create_game(conn_string: Option<String>) -> GameResult<Self> {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
             .unwrap();
 
-        let json = base64::decode(conn_string).map_err(|_| {
-            GameError::ConfigError("Failed to decode base64 conn string".to_string())
-        })?;
-        let sd: RTCSessionDescription = serde_json::from_slice(&json).map_err(|_| {
-            GameError::ConfigError(
-                "Failed to convert connection string to RTCSessionDescription".to_string(),
-            )
-        })?;
+        let (tx, rx) = flume::unbounded::<MultiplayerGameMessage>();
+        let (push_tx, push_rx) = flume::unbounded::<MultiplayerGameMessage>();
+        rt.spawn(Self::create_game_async(conn_string, push_tx, rx));
 
-        rt.block_on(Self::create_game_async(sd, connect))
+        Ok(Self {
+            event_buffer: push_rx,
+            event_push_buffer: tx,
+        })
     }
 }

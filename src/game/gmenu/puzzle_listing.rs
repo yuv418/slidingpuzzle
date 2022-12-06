@@ -6,6 +6,8 @@ use ggez::{
 
 use crate::game::{drawable::Drawable, player::PLAYER, scene::Scene, tiles::TileState};
 
+#[cfg(feature = "multiplayer")]
+use super::super::multiplayer::join_scene::JoinMultiplayerScene;
 use super::{menu_item::GameMenuItem, GameMenu};
 
 #[derive(Debug)]
@@ -169,10 +171,20 @@ impl Scene for PuzzleListing {
                 self.listing_start + (self.currently_selected.0 * 2) + self.currently_selected.1;
 
             println!("starting tile state {}", game_image_num);
-            return Some(Box::new(
-                TileState::new(ctx, game_image_num, player.player_settings.num_rows_cols)
-                    .expect("Failed to create tile state"),
-            ));
+            return Some(
+                // TODO move this the puzzle view
+                if cfg!(feature = "multiplayer") {
+                    Box::new(
+                        JoinMultiplayerScene::new(ctx, game_image_num, None)
+                            .expect("Failed to create tile state"),
+                    )
+                } else {
+                    Box::new(
+                        TileState::new(ctx, game_image_num, player.player_settings.num_rows_cols)
+                            .expect("Failed to create tile state"),
+                    )
+                },
+            );
         }
 
         let next_image_path = |num: usize| -> String { format!("/images/{}.jpg", num) };
@@ -208,4 +220,6 @@ impl Scene for PuzzleListing {
     ) -> ggez::GameResult {
         self.draw(ctx, canvas)
     }
+
+    fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {}
 }
