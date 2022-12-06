@@ -36,3 +36,6 @@ keyframe = "1"
 keyframe_derive = "1"
 
 chrono = { version = "0.4", features = [ "default", "serde" ] }
+
+env_logger = "0.10"
+log = "0.4"

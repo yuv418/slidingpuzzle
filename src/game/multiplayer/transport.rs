@@ -1,6 +1,7 @@
 use std::{pin::Pin, sync::Arc};
 
 use ggez::{GameError, GameResult};
+use serde::{de::DeserializeOwned, Deserialize};
 use webrtc::{
     api::{interceptor_registry, media_engine::MediaEngine, APIBuilder},
     data_channel::{data_channel_message::DataChannelMessage, RTCDataChannel},
@@ -84,6 +85,20 @@ impl MultiplayerTransport {
         }
     }
 
+    fn session_desc_from_str<T>(conn_string: String) -> GameResult<T>
+    where
+        T: DeserializeOwned,
+    {
+        let json = base64::decode(conn_string).map_err(|_| {
+            GameError::ConfigError("Failed to decode base64 conn string".to_string())
+        })?;
+        serde_json::from_slice(&json).map_err(|_| {
+            GameError::ConfigError(
+                "Failed to convert connection string to RTCSessionDescription".to_string(),
+            )
+        })
+    }
+
     async fn create_game_async(
         conn_string: Option<String>,
         tx: flume::Sender<MultiplayerGameMessage>,
@@ -108,21 +123,23 @@ impl MultiplayerTransport {
                 Self::channel_msg_handler(msg, tx_c.clone());
                 Box::pin(async move {})
             }));
+            let rx_cc = rx_c.clone();
+            let peer_conn_c = peer_conn.clone();
             tokio::spawn(async move { Self::channel_push_handler(rx_c, channel).await });
             // Add a listener to set the remote description for the peer
+            tokio::spawn(async move {
+                while let Ok(MultiplayerGameMessage::ConnectionString(s)) = rx_cc.recv_async().await
+                {
+                    peer_conn_c
+                        .set_remote_description(
+                            Self::session_desc_from_str(s)
+                                .expect("Failed to parse remote description string"),
+                        )
+                        .await
+                        .expect("Failed to set remote description");
+                }
+            });
         } else {
-            let json = base64::decode(conn_string.unwrap()).map_err(|_| {
-                GameError::ConfigError("Failed to decode base64 conn string".to_string())
-            })?;
-            let sd: RTCSessionDescription = serde_json::from_slice(&json).map_err(|_| {
-                GameError::ConfigError(
-                    "Failed to convert connection string to RTCSessionDescription".to_string(),
-                )
-            })?;
-            peer_conn.set_remote_description(sd).await.map_err(|_| {
-                GameError::CustomError("Failed to set description for peer".to_string())
-            })?;
-
             peer_conn.on_data_channel(Box::new(move |channel: Arc<RTCDataChannel>| {
                 if channel.label() == "MultiplayerGameData" {
                     let tx_cc = tx_c.clone();
@@ -140,16 +157,26 @@ impl MultiplayerTransport {
             }));
         }
 
-        let offer = peer_conn
-            .create_offer(None)
-            .await
-            .map_err(|_| GameError::CustomError("Failed to create offer".to_string()))?;
+        let offer = if let Some(c_s) = conn_string {
+            let offer = Self::session_desc_from_str::<RTCSessionDescription>(c_s)?;
+            peer_conn.set_remote_description(offer).await.map_err(|e| {
+                GameError::CustomError(format!("Failed to set remote description {:?}", e))
+            })?;
+            let answer = peer_conn
+                .create_answer(None)
+                .await
+                .map_err(|e| GameError::CustomError(format!("Failed to create answer {:?}", e)))?;
+            answer
+        } else {
+            peer_conn
+                .create_offer(None)
+                .await
+                .map_err(|_| GameError::CustomError("Failed to create offer".to_string()))?
+        };
         let mut g_c = peer_conn.gathering_complete_promise().await;
-        peer_conn
-            .set_local_description(offer)
-            .await
-            .map_err(|_| GameError::CustomError("Failed to set local description".to_string()))?;
-
+        peer_conn.set_local_description(offer).await.map_err(|e| {
+            GameError::CustomError(format!("Failed to set local description {:?}", e))
+        })?;
         g_c.recv().await;
 
         // Push this into the tx

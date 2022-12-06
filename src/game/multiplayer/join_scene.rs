@@ -19,18 +19,20 @@ use super::{transport::MultiplayerTransport, MultiplayerGameMessage};
 
 pub struct JoinMultiplayerScene {
     connecting: bool,
+    creator: bool,
     wait_for_clipboard: Text,
     header: Text,
     conn_string: Option<Text>,
-    transport: MultiplayerTransport,
+    transport: Option<MultiplayerTransport>,
     clipboard: Clipboard,
     puzzle_num: usize,
 }
 
 impl JoinMultiplayerScene {
-    pub fn new(ctx: &mut Context, puzzle_num: usize, conn_str: Option<String>) -> GameResult<Self> {
+    pub fn new(ctx: &mut Context, puzzle_num: usize, creator: bool) -> GameResult<Self> {
         Ok(JoinMultiplayerScene {
-            connecting: conn_str.is_some(),
+            connecting: !creator,
+            creator,
             wait_for_clipboard: Text::new(TextFragment {
                 text: "Press Enter when you have copied\nthe other player's connection string."
                     .to_string(),
@@ -39,7 +41,7 @@ impl JoinMultiplayerScene {
                 scale: Some(PxScale::from(38.0)),
             }),
             header: Text::new(TextFragment {
-                text: if conn_str.is_none() {
+                text: if creator {
                     "Create Multiplayer Game"
                 } else {
                     "Join Multiplayer Game"
@@ -53,7 +55,11 @@ impl JoinMultiplayerScene {
             puzzle_num,
             clipboard: Clipboard::new()
                 .map_err(|_| GameError::CustomError("Failed to get game clipboard".to_string()))?,
-            transport: MultiplayerTransport::create_game(conn_str)?,
+            transport: if creator {
+                Some(MultiplayerTransport::create_game(None)?)
+            } else {
+                None
+            },
         })
     }
 }
@@ -89,21 +95,23 @@ impl Drawable for JoinMultiplayerScene {
 
 impl Scene for JoinMultiplayerScene {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        if let Ok(event) = self.transport.event_buffer.try_recv() {
-            match event {
-                MultiplayerGameMessage::ConnectionString(s) => {
-                    self.clipboard.set_text(&s).map_err(|_| {
-                        GameError::CustomError(
-                            "Failed to copy connection string to clipboard".to_string(),
-                        )
-                    })?;
-                    self.conn_string = Some(Text::new(TextFragment {
-                        text: "Copied connection string to clipboard!".to_string(),
-                        color: Some(Color::BLACK),
-                        font: Some("SecularOne-Regular".into()),
-                        scale: Some(PxScale::from(48.0)),
-                    }));
-                    self.connecting = true;
+        if let Some(transport) = &self.transport {
+            if let Ok(event) = transport.event_buffer.try_recv() {
+                match event {
+                    MultiplayerGameMessage::ConnectionString(s) => {
+                        self.clipboard.set_text(&s).map_err(|_| {
+                            GameError::CustomError(
+                                "Failed to copy connection string to clipboard".to_string(),
+                            )
+                        })?;
+                        self.conn_string = Some(Text::new(TextFragment {
+                            text: "Copied connection string to clipboard!".to_string(),
+                            color: Some(Color::BLACK),
+                            font: Some("SecularOne-Regular".into()),
+                            scale: Some(PxScale::from(48.0)),
+                        }));
+                        self.connecting = true;
+                    }
                 }
             }
         }
@@ -118,11 +126,28 @@ impl Scene for JoinMultiplayerScene {
         if let Some(vkeycode) = key_input.keycode {
             match vkeycode {
                 VirtualKeyCode::Return => {
-                    let conn_str = self.clipboard.get_text().map_err(|_| {
-                        GameError::CustomError(
-                            "Failed to get connection string from clipboard".to_string(),
-                        )
-                    });
+                    let conn_str = self
+                        .clipboard
+                        .get_text()
+                        .map_err(|_| {
+                            GameError::CustomError(
+                                "Failed to get connection string from clipboard".to_string(),
+                            )
+                        })
+                        // Make this method return a result so this doesn't happen
+                        .unwrap();
+                    println!("{:?}", conn_str);
+                    if self.creator {
+                        self.transport
+                            .as_ref()
+                            .unwrap()
+                            .event_push_buffer
+                            .send(MultiplayerGameMessage::ConnectionString(conn_str))
+                            .unwrap();
+                    } else {
+                        self.transport =
+                            Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
+                    }
                 }
                 _ => {}
             }

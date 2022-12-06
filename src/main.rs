@@ -10,6 +10,7 @@ mod game;
 // into X by X tiles
 
 pub fn main() -> GameResult {
+    env_logger::init();
     let mut cb = ggez::ContextBuilder::new("SlidingPuzzle", "cdknight")
         .window_setup(ggez::conf::WindowSetup::default().title("Sliding Puzzle"))
         .window_mode(

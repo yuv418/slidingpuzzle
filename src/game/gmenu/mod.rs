@@ -4,6 +4,7 @@ use self::menu_item::GameMenuItem;
 use self::puzzle_listing::PuzzleListing;
 
 use super::drawable::Drawable as SlidingPuzzleDrawable;
+use super::multiplayer::join_scene::JoinMultiplayerScene;
 use super::player::settings_scene::SettingsScene;
 use super::player::{self, Player};
 use super::scene::Scene;
@@ -83,6 +84,20 @@ impl GameMenu {
             )?,
             GameMenuItem::new_text_item(
                 ctx,
+                "Join Multiplayer",
+                Box::new(|context: &mut Context| {
+                    Box::new(
+                        JoinMultiplayerScene::new(context, 0, false)
+                            .expect("Failed to create join multiplayer scene"),
+                    )
+                }),
+                90.0,
+                110.0 + tx_s.y + 100.0,
+                tx_s.x,
+                80.0,
+            )?,
+            GameMenuItem::new_text_item(
+                ctx,
                 "Choose a Puzzle",
                 Box::new(|context: &mut Context| {
                     Box::new(
@@ -90,7 +105,7 @@ impl GameMenu {
                     )
                 }),
                 90.0,
-                110.0 + tx_s.y + 100.0,
+                110.0 + tx_s.y + 200.0,
                 tx_s.x,
                 80.0,
             )?,
@@ -104,7 +119,7 @@ impl GameMenu {
                     )
                 }),
                 90.0,
-                110.0 + tx_s.y + 200.0,
+                110.0 + tx_s.y + 300.0,
                 tx_s.x,
                 80.0,
             )?,

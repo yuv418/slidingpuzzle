@@ -175,7 +175,7 @@ impl Scene for PuzzleListing {
                 // TODO move this the puzzle view
                 if cfg!(feature = "multiplayer") {
                     Box::new(
-                        JoinMultiplayerScene::new(ctx, game_image_num, None)
+                        JoinMultiplayerScene::new(ctx, game_image_num, true)
                             .expect("Failed to create tile state"),
                     )
                 } else {
