@@ -77,6 +77,7 @@ impl MultiplayerTransport {
         channel: Arc<RTCDataChannel>,
     ) {
         while let Ok(msg) = push_rx.recv() {
+            println!("msg {:?}", msg);
             if let Ok(ser_msg) = bincode::serialize(&msg) {
                 if let Err(e) = channel.send(&bytes::Bytes::from(ser_msg)).await {
                     println!("Failed to send event to peer {:?}", e);
@@ -118,18 +119,23 @@ impl MultiplayerTransport {
                     GameError::CustomError("Failed to create a data channel".to_string())
                 })?;
 
+            channel.on_open(Box::new(move || {
+                println!("Data channel open!");
+                Box::pin(async move {})
+            }));
+
             // Register handlers
             channel.on_message(Box::new(move |msg: DataChannelMessage| {
                 Self::channel_msg_handler(msg, tx_c.clone());
                 Box::pin(async move {})
             }));
+
             let rx_cc = rx_c.clone();
             let peer_conn_c = peer_conn.clone();
-            tokio::spawn(async move { Self::channel_push_handler(rx_c, channel).await });
             // Add a listener to set the remote description for the peer
+
             tokio::spawn(async move {
-                while let Ok(MultiplayerGameMessage::ConnectionString(s)) = rx_cc.recv_async().await
-                {
+                if let Ok(MultiplayerGameMessage::ConnectionString(s)) = rx_cc.recv() {
                     peer_conn_c
                         .set_remote_description(
                             Self::session_desc_from_str(s)
@@ -138,9 +144,11 @@ impl MultiplayerTransport {
                         .await
                         .expect("Failed to set remote description");
                 }
+                Self::channel_push_handler(rx_c, channel).await
             });
         } else {
             peer_conn.on_data_channel(Box::new(move |channel: Arc<RTCDataChannel>| {
+                println!("New channel made {}", channel.label());
                 if channel.label() == "MultiplayerGameData" {
                     let tx_cc = tx_c.clone();
                     // Register handlers
@@ -157,8 +165,8 @@ impl MultiplayerTransport {
             }));
         }
 
-        let offer = if let Some(c_s) = conn_string {
-            let offer = Self::session_desc_from_str::<RTCSessionDescription>(c_s)?;
+        let offer = if let Some(c_s) = &conn_string {
+            let offer = Self::session_desc_from_str::<RTCSessionDescription>(c_s.to_string())?;
             peer_conn.set_remote_description(offer).await.map_err(|e| {
                 GameError::CustomError(format!("Failed to set remote description {:?}", e))
             })?;
@@ -189,6 +197,7 @@ impl MultiplayerTransport {
                 "Failed to get peer base64".to_string(),
             ));
         };
+        println!("base64_conn_str {}", base64_conn_str);
 
         tx.send(MultiplayerGameMessage::ConnectionString(base64_conn_str))
             .map_err(|_| GameError::CustomError("Failed to send the conn str to tx".to_string()))?;

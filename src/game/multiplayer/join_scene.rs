@@ -112,6 +112,7 @@ impl Scene for JoinMultiplayerScene {
                         }));
                         self.connecting = true;
                     }
+                    MultiplayerGameMessage::CloseConnection => todo!(),
                 }
             }
         }
@@ -136,14 +137,16 @@ impl Scene for JoinMultiplayerScene {
                         })
                         // Make this method return a result so this doesn't happen
                         .unwrap();
-                    println!("{:?}", conn_str);
                     if self.creator {
-                        self.transport
+                        if let Err(e) = self
+                            .transport
                             .as_ref()
                             .unwrap()
                             .event_push_buffer
                             .send(MultiplayerGameMessage::ConnectionString(conn_str))
-                            .unwrap();
+                        {
+                            println!("failed to send event");
+                        }
                     } else {
                         self.transport =
                             Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
