@@ -9,7 +9,7 @@ use arboard::Clipboard;
 use ggez::{
     glam::Vec2,
     graphics::{Color, PxScale, Text, TextFragment},
-    winit::{event::VirtualKeyCode, platform::unix::x11::ffi::KeyCode},
+    winit::event::VirtualKeyCode,
     Context, GameError, GameResult,
 };
 use log::info;
