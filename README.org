@@ -1,0 +1,13 @@
+* Sliding Puzzle Game
+
+Features:
+- ~n x n~ sliding puzzle game
+- Multiplayer sliding puzzle game
+
+To-do:
+- GUI error handling
+- Multiplayer disconnection handling
+- Load images at the beginning of runtime
+- Puzzle view + listing (list numbers correctly when puzzles < 4)
+- Conditional compilation for multiplayer feature
+- Make animations and scene layout more ergonomic?

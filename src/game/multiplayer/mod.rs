@@ -9,7 +9,9 @@ pub mod transport;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum MultiplayerGameMessage {
     ConnectionString(String),
-    Hello,
+    Hello {
+        username: String,
+    },
     CloseConnection,
     DeleteRandomTile((usize, usize)),
     StartGame {

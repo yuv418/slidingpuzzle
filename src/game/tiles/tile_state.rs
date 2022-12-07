@@ -40,7 +40,7 @@ pub struct TileState {
     inwards_animated_tiles: usize,
     game_completed: bool,
 
-    current_animation: Option<(usize, usize)>,
+    pub current_animation: Option<(usize, usize)>,
     // Previous from redoing the previous swap
     previous_swap: Option<(usize, usize)>,
 
@@ -55,6 +55,7 @@ pub struct TileState {
     // Multiplayer stuff
     transport: Option<Arc<MultiplayerTransport>>,
     peer: bool,
+    pub puzzle_statistics: Option<PuzzleStatistics>,
 
     pub x: f32,
     pub y: f32,
@@ -106,6 +107,7 @@ impl TileState {
             game_cancelled: false,
             transport,
             peer,
+            puzzle_statistics: None,
             x,
             y,
         };
@@ -388,8 +390,9 @@ impl Scene for TileState {
                                     self.tile_blank_cell = (i, j);
                                     self.blank_cell = (i, j);
                                 }
-                                MultiplayerGameMessage::GameCompleted(..) => {
-                                    println!("Game completed, sending to peer");
+                                MultiplayerGameMessage::GameCompleted(stats) => {
+                                    self.puzzle_statistics = Some(stats);
+                                    println!("Peer completed game");
                                     self.game_completed = true
                                 }
                                 _ => {}
@@ -447,9 +450,15 @@ impl Scene for TileState {
             // TODO move this to the update method
             self.check_completed();
             if !self.peer && self.game_completed() {
-                if let Err(e) = self.transport.as_ref().unwrap().event_push_buffer.send(
-                    MultiplayerGameMessage::GameCompleted(self.get_puzzle_statistics()),
-                ) {
+                let stats = self.get_puzzle_statistics();
+                self.puzzle_statistics = Some(stats.clone());
+                if let Err(e) = self
+                    .transport
+                    .as_ref()
+                    .unwrap()
+                    .event_push_buffer
+                    .send(MultiplayerGameMessage::GameCompleted(stats))
+                {
                     println!("Failed to send game completed {:?}", e);
                 }
             }

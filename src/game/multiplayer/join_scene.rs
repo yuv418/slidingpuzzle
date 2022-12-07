@@ -133,7 +133,7 @@ impl Scene for JoinMultiplayerScene {
                         }));
                         self.connecting = true;
                     }
-                    MultiplayerGameMessage::Hello => {
+                    MultiplayerGameMessage::Hello { .. } => {
                         info!("Hello recv, starting game");
                         let opt_player = PLAYER.lock().unwrap();
                         let player = opt_player.as_ref().unwrap();
@@ -196,7 +196,13 @@ impl Scene for JoinMultiplayerScene {
                             .as_ref()
                             .unwrap()
                             .event_push_buffer
-                            .send(MultiplayerGameMessage::Hello)
+                            .send(MultiplayerGameMessage::Hello {
+                                username: {
+                                    let opt_p = PLAYER.lock().unwrap();
+                                    let p = opt_p.as_ref().unwrap();
+                                    p.username()
+                                },
+                            })
                             .unwrap();
                     }
                 }
