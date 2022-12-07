@@ -158,8 +158,8 @@ impl Drawable for MultiplayerGameView {
         self.peer_tile_state.draw(ctx, canvas)?;
 
         // Draw usernames
-        canvas.draw(&self.local_user_text, Vec2::new(90.0 + 835.0, 90.0));
         canvas.draw(&self.local_user_text, Vec2::new(90.0, 90.0));
+        canvas.draw(&self.peer_user_text, Vec2::new(90.0 + 835.0, 90.0));
 
         if let Some(winner) = &self.winner {
             if match winner {
