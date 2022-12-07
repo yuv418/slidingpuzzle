@@ -30,6 +30,8 @@ pub struct JoinMultiplayerScene {
     clipboard: Clipboard,
     puzzle_num: usize,
     game_started: Option<MultiplayerGameMessage>,
+
+    peer_username: Option<String>,
 }
 
 impl JoinMultiplayerScene {
@@ -65,6 +67,7 @@ impl JoinMultiplayerScene {
                 None
             },
             game_started: None,
+            peer_username: None,
         })
     }
 }
@@ -103,12 +106,23 @@ impl Scene for JoinMultiplayerScene {
         if let Some(MultiplayerGameMessage::StartGame {
             img_num,
             num_rows_cols,
-        }) = self.game_started
+            host_username,
+        }) = &self.game_started
         {
             let transport = self.transport.take().unwrap();
             Some(Box::new(
-                MultiplayerGameView::new(ctx, transport, img_num, num_rows_cols)
-                    .expect("Failed to create multiplayer game view"),
+                MultiplayerGameView::new(
+                    ctx,
+                    transport,
+                    *img_num,
+                    *num_rows_cols,
+                    if self.creator {
+                        self.peer_username.take().unwrap()
+                    } else {
+                        host_username.clone()
+                    },
+                )
+                .expect("Failed to create multiplayer game view"),
             ))
         } else {
             None
@@ -133,14 +147,17 @@ impl Scene for JoinMultiplayerScene {
                         }));
                         self.connecting = true;
                     }
-                    MultiplayerGameMessage::Hello { .. } => {
+                    MultiplayerGameMessage::Hello { username } => {
                         info!("Hello recv, starting game");
                         let opt_player = PLAYER.lock().unwrap();
                         let player = opt_player.as_ref().unwrap();
 
+                        self.peer_username = Some(username);
+
                         self.game_started = Some(MultiplayerGameMessage::StartGame {
                             img_num: self.puzzle_num,
                             num_rows_cols: player.player_settings.num_rows_cols,
+                            host_username: player.username(),
                         });
                         self.transport
                             .as_ref()

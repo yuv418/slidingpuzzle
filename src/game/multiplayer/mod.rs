@@ -17,6 +17,7 @@ pub enum MultiplayerGameMessage {
     StartGame {
         img_num: usize,
         num_rows_cols: usize,
+        host_username: String,
     },
     SwapTiles {
         i1j1: (usize, usize),

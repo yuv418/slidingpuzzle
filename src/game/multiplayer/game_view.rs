@@ -8,7 +8,7 @@ use ggez::{
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
-use crate::game::{drawable::Drawable, scene::Scene, tiles::TileState};
+use crate::game::{drawable::Drawable, player::PLAYER, scene::Scene, tiles::TileState};
 
 use super::transport::MultiplayerTransport;
 
@@ -22,6 +22,11 @@ pub struct MultiplayerGameView {
     peer_tile_state: TileState,
     // Meshes
     separator_line: Mesh,
+
+    // Username display
+    local_user_text: Text,
+    peer_user_text: Text,
+
     winner_text: Text,
     winner_anim: AnimationSequence<f32>,
     winner: Option<Winner>,
@@ -33,6 +38,7 @@ impl MultiplayerGameView {
         transport: MultiplayerTransport,
         img_num: usize,
         num_rows_cols: usize,
+        peer_username: String,
     ) -> GameResult<Self> {
         let transport = Arc::new(transport);
         Ok(Self {
@@ -74,6 +80,22 @@ impl MultiplayerGameView {
                 (0.0, 0.0, EaseInOut),
                 (context.gfx.drawable_size().1, 2.0, EaseInOut)
             ],
+            local_user_text: Text::new(TextFragment {
+                text: {
+                    let opt_player = PLAYER.lock().unwrap();
+                    let player = opt_player.as_ref().unwrap();
+                    player.username()
+                },
+                color: Some(Color::BLACK),
+                font: Some("SecularOne-Regular".into()),
+                scale: Some(PxScale::from(38.0)),
+            }),
+            peer_user_text: Text::new(TextFragment {
+                text: peer_username,
+                color: Some(Color::BLACK),
+                font: Some("SecularOne-Regular".into()),
+                scale: Some(PxScale::from(38.0)),
+            }),
         })
     }
 }
@@ -135,6 +157,10 @@ impl Drawable for MultiplayerGameView {
         canvas.draw(&self.separator_line, Vec2::new(0.0, 0.0));
         self.peer_tile_state.draw(ctx, canvas)?;
 
+        // Draw usernames
+        canvas.draw(&self.local_user_text, Vec2::new(90.0 + 835.0, 90.0));
+        canvas.draw(&self.local_user_text, Vec2::new(90.0, 90.0));
+
         if let Some(winner) = &self.winner {
             if match winner {
                 Winner::User => self.user_tile_state.current_animation.is_none(),
@@ -149,7 +175,7 @@ impl Drawable for MultiplayerGameView {
                     Rect {
                         x: match winner {
                             Winner::User => 0.0,
-                            Winner::Peer => 825.0,
+                            Winner::Peer => 835.0,
                         },
                         y: 0.0,
                         w: 800.0,
@@ -164,7 +190,7 @@ impl Drawable for MultiplayerGameView {
                         Vec2::new(
                             90.0 + match winner {
                                 Winner::User => 0.0,
-                                Winner::Peer => 825.0,
+                                Winner::Peer => 835.0,
                             },
                             90.0,
                         ),
