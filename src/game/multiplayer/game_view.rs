@@ -57,8 +57,8 @@ impl MultiplayerGameView {
             separator_line: Mesh::new_line(
                 context,
                 &[
-                    Vec2::new(815.0, 0.0),
-                    Vec2::new(815.0, context.gfx.drawable_size().1),
+                    Vec2::new(835.0, 0.0),
+                    Vec2::new(835.0, context.gfx.drawable_size().1),
                 ],
                 10.0,
                 Color::RED,
@@ -143,7 +143,6 @@ impl Drawable for MultiplayerGameView {
                 if !self.winner_anim.finished() {
                     self.winner_anim.advance_by(0.05);
                 }
-                let drawable_size = ctx.gfx.drawable_size();
                 let cover_rect = Mesh::new_rectangle(
                     ctx,
                     DrawMode::fill(),
