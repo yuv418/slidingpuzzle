@@ -44,10 +44,24 @@ impl MultiplayerTransport {
             .build();
 
         let rtc_conf = RTCConfiguration {
-            ice_servers: vec![RTCIceServer {
-                urls: vec!["stun:stun.l.google.com:19302".to_owned()],
-                ..Default::default()
-            }],
+            ice_servers: vec![
+                RTCIceServer {
+                    urls: vec!["stun:stun.l.google.com:19302".to_owned()],
+                    ..Default::default()
+                },
+                RTCIceServer {
+                    urls: vec!["turn:openrelay.metered.ca:80".to_owned()],
+                    username: "openrelayproject".to_string(),
+                    credential: "openrelayproject".to_string(),
+                    ..Default::default()
+                },
+                RTCIceServer {
+                    urls: vec!["turn:openrelay.metered.ca:443".to_owned()],
+                    username: "openrelayproject".to_string(),
+                    credential: "openrelayproject".to_string(),
+                    ..Default::default()
+                },
+            ],
             ..Default::default()
         };
 
