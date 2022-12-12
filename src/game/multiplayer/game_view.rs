@@ -4,11 +4,15 @@ use ggez::{
     glam::Vec2,
     graphics::{Color, DrawMode, DrawParam, Mesh, PxScale, Rect, Text, TextFragment},
     input::keyboard::KeyInput,
+    winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
-use crate::game::{drawable::Drawable, player::PLAYER, scene::Scene, tiles::TileState};
+use crate::game::{
+    drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER, scene::Scene,
+    tiles::TileState,
+};
 
 use super::transport::MultiplayerTransport;
 
@@ -30,6 +34,9 @@ pub struct MultiplayerGameView {
     winner_text: Text,
     winner_anim: AnimationSequence<f32>,
     winner: Option<Winner>,
+
+    game_cancelled: bool,
+    img_num: usize,
 }
 
 impl MultiplayerGameView {
@@ -42,6 +49,7 @@ impl MultiplayerGameView {
     ) -> GameResult<Self> {
         let transport = Arc::new(transport);
         Ok(Self {
+            img_num,
             user_tile_state: TileState::new(
                 context,
                 img_num,
@@ -96,11 +104,28 @@ impl MultiplayerGameView {
                 font: Some("SecularOne-Regular".into()),
                 scale: Some(PxScale::from(38.0)),
             }),
+            game_cancelled: false,
         })
     }
 }
 
 impl Scene for MultiplayerGameView {
+    fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
+        if self.game_cancelled {
+            ctx.gfx
+                .set_mode(
+                    ggez::conf::WindowMode::default()
+                        .dimensions(ctx.gfx.size().0 / 2.0, ctx.gfx.size().1)
+                        .resizable(true),
+                )
+                .expect("Failed to resize window for tile game");
+            Some(Box::new(
+                PuzzleView::new(ctx, self.img_num).expect("Failed to create puzzle view"),
+            ))
+        } else {
+            None
+        }
+    }
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         // Logic to check if there is a winner
         if let None = self.winner {
@@ -144,6 +169,10 @@ impl Scene for MultiplayerGameView {
     fn handle_key_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) {
         self.user_tile_state
             .handle_key_event(ctx, key_input, repeat);
+        // This will eventually get changed
+        if let Some(VirtualKeyCode::Escape) = key_input.keycode {
+            self.game_cancelled = true;
+        }
     }
 }
 
