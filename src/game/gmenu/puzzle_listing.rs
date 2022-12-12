@@ -4,7 +4,10 @@ use ggez::{
     Context, GameResult,
 };
 
-use crate::game::{drawable::Drawable, player::PLAYER, scene::Scene, tiles::TileState};
+use crate::game::{
+    drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER, scene::Scene,
+    tiles::TileState,
+};
 
 #[cfg(feature = "multiplayer")]
 use super::super::multiplayer::join_scene::JoinMultiplayerScene;
@@ -175,8 +178,7 @@ impl Scene for PuzzleListing {
                 // TODO move this the puzzle view
                 if cfg!(feature = "multiplayer") {
                     Box::new(
-                        JoinMultiplayerScene::new(ctx, game_image_num, true)
-                            .expect("Failed to create tile state"),
+                        PuzzleView::new(ctx, game_image_num).expect("Failed to create tile state"),
                     )
                 } else {
                     Box::new(

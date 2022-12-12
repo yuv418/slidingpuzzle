@@ -17,6 +17,7 @@ use ggez::{Context, GameResult};
 
 pub mod menu_item;
 pub mod puzzle_listing;
+pub mod puzzle_view;
 pub mod settings;
 
 pub struct GameMenu {

@@ -14,7 +14,13 @@ use ggez::{
 };
 use log::info;
 
-use crate::game::{drawable::Drawable, player::PLAYER, scene::Scene, tiles::TileState};
+use crate::game::{
+    drawable::Drawable,
+    gmenu::{puzzle_listing::PuzzleListing, puzzle_view::PuzzleView},
+    player::PLAYER,
+    scene::Scene,
+    tiles::TileState,
+};
 
 use super::{
     game_view::MultiplayerGameView, transport::MultiplayerTransport, MultiplayerGameMessage,
@@ -29,6 +35,7 @@ pub struct JoinMultiplayerScene {
     transport: Option<MultiplayerTransport>,
     clipboard: Clipboard,
     puzzle_num: usize,
+    game_cancelled: bool,
     game_started: Option<MultiplayerGameMessage>,
 
     peer_username: Option<String>,
@@ -66,6 +73,7 @@ impl JoinMultiplayerScene {
             } else {
                 None
             },
+            game_cancelled: false,
             game_started: None,
             peer_username: None,
         })
@@ -123,6 +131,10 @@ impl Scene for JoinMultiplayerScene {
                     },
                 )
                 .expect("Failed to create multiplayer game view"),
+            ))
+        } else if self.game_cancelled {
+            Some(Box::new(
+                PuzzleView::new(ctx, self.puzzle_num).expect("Failed to return to puzzle listing"),
             ))
         } else {
             None
@@ -184,6 +196,9 @@ impl Scene for JoinMultiplayerScene {
     ) {
         if let Some(vkeycode) = key_input.keycode {
             match vkeycode {
+                VirtualKeyCode::Escape => {
+                    self.game_cancelled = true;
+                }
                 VirtualKeyCode::Return => {
                     let conn_str = self
                         .clipboard
