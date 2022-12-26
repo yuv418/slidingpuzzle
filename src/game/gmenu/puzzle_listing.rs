@@ -1,17 +1,15 @@
 use ggez::{
-    graphics::{self, Color, Image, PxScale, Text, TextFragment},
+    graphics::{Color, Image},
     winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 
 use crate::game::{
-    drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER, scene::Scene,
-    tiles::TileState,
+    animation::DrawablePos, drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER,
+    scene::Scene, tiles::TileState, ui::uitext::UIText,
 };
 
-#[cfg(feature = "multiplayer")]
-use super::super::multiplayer::join_scene::JoinMultiplayerScene;
-use super::{menu_item::GameMenuItem, GameMenu};
+use super::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem};
 
 #[derive(Debug)]
 enum PaginationDirection {
@@ -24,7 +22,7 @@ pub struct PuzzleListing {
     listing_start: usize,
     currently_selected: (usize, usize),
     menu_items: [[Option<GameMenuItem>; 2]; 2],
-    title_mesh: Text,
+    title_mesh: UIText,
     page_direction: Option<PaginationDirection>,
     back: bool,
     start_game: bool,
@@ -32,14 +30,14 @@ pub struct PuzzleListing {
 
 impl PuzzleListing {
     pub fn new(ctx: &mut Context, listing_start: usize) -> GameResult<Self> {
-        let title_mesh = Text::new(TextFragment {
-            text: format!("Puzzles {} to {}", listing_start + 1, listing_start + 4),
-            color: Some(Color::BLACK),
-            font: Some("SecularOne-Regular".into()),
-            scale: Some(PxScale::from(78.0)),
-        });
+        let title_mesh = UIText::new(
+            format!("Puzzles {} to {}", listing_start + 1, listing_start + 4),
+            Color::BLACK,
+            78.0,
+            DrawablePos { x: 45.0, y: 45.0 },
+        );
 
-        let t_sz = title_mesh.measure(ctx)?;
+        let t_sz = title_mesh.text.measure(ctx)?;
 
         let mut menu_items: [[Option<GameMenuItem>; 2]; 2] = [[None, None], [None, None]];
 
@@ -52,7 +50,8 @@ impl PuzzleListing {
                         ctx,
                         Image::from_path(ctx, puzzle_path)?,
                         &format!("Puzzle {}", puzzle_num + 1),
-                        Box::new(super::next_page),
+                        // This should never happen, so we can panic if it does.
+                        Some(Box::new(|_| -> Box<dyn Scene> { panic!() })),
                         45.0 + (j as f32 * 320.0),
                         55.0 + t_sz.y + (i as f32 * 320.0),
                         300.0,
@@ -83,10 +82,7 @@ impl Drawable for PuzzleListing {
         ctx: &mut ggez::Context,
         canvas: &mut ggez::graphics::Canvas,
     ) -> ggez::GameResult {
-        canvas.draw(
-            &self.title_mesh,
-            graphics::DrawParam::from([45.0, 45.0]).color(Color::BLACK),
-        );
+        self.title_mesh.draw(ctx, canvas)?;
 
         for listing_row in &mut self.menu_items {
             for listing in listing_row {
@@ -163,7 +159,7 @@ impl Scene for PuzzleListing {
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {
         if self.back {
             return Some(Box::new(
-                GameMenu::new(ctx).expect("Failed to launch game menu"),
+                GameMenu::new::<MainMenu>(ctx).expect("Failed to launch game menu"),
             ));
         } else if self.start_game {
             let opt_player = PLAYER.lock().unwrap();

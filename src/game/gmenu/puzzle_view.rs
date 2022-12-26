@@ -13,95 +13,93 @@
 // -> Start game
 
 use ggez::{
-    glam::Vec2,
-    graphics::{Color, DrawParam, Image, PxScale, Text, TextFragment},
+    graphics::{Color, DrawParam, Image},
     input::keyboard::KeyInput,
     winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 
 use crate::game::{
-    drawable::Drawable,
-    multiplayer::{self, join_scene::JoinMultiplayerScene},
-    player::PLAYER,
-    scene::Scene,
-    tiles::TileState,
+    animation::DrawablePos, drawable::Drawable, multiplayer::join_scene::JoinMultiplayerScene,
+    player::PLAYER, scene::Scene, tiles::TileState, ui::uitext::UIText,
 };
 
-use super::{menu_item::GameMenuItem, puzzle_listing::PuzzleListing};
+use super::{
+    menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
+    puzzle_listing::PuzzleListing,
+};
 
 pub struct PuzzleView {
-    title_text: Text,
+    title_text: UIText,
 
     // Image
     puzzle_image: Image,
 
-    selected_action: usize,
-    puzzle_action_mappings: Vec<GameMenuItem>,
+    puzzle_action_mappings: GameMenuItemList,
     puzzle_num: usize,
 
-    next_page: bool,
     back: bool,
+}
+
+fn create_singleplayer_game(context: &mut Context, puzzle_num: usize) -> Box<dyn Scene> {
+    let opt_player = PLAYER.lock().unwrap();
+    let player = opt_player.as_ref().unwrap();
+    Box::new(
+        TileState::new(
+            context,
+            puzzle_num,
+            player.player_settings.num_rows_cols,
+            0.0,
+            0.0,
+            None,
+            false,
+        )
+        .expect("Failed to create singleplayer game"),
+    )
+}
+
+fn create_multiplayer_game(context: &mut Context, puzzle_num: usize) -> Box<dyn Scene> {
+    Box::new(
+        JoinMultiplayerScene::new(context, puzzle_num, true)
+            .expect("Failed to create join multiplayer scene"),
+    )
 }
 
 impl PuzzleView {
     pub fn new(ctx: &mut Context, puzzle_num: usize) -> GameResult<Self> {
-        let mut puzzle_action_mappings = vec![
-            GameMenuItem::new_text_item(
-                ctx,
-                "Play as Singleplayer",
-                // TODO we probably want to move continue_game to the TileState class as a
-                // static method
-                Box::new(move |context: &mut Context| {
-                    let opt_player = PLAYER.lock().unwrap();
-                    let player = opt_player.as_ref().unwrap();
-                    Box::new(
-                        TileState::new(
-                            context,
-                            puzzle_num,
-                            player.player_settings.num_rows_cols,
-                            0.0,
-                            0.0,
-                            None,
-                            false,
-                        )
-                        .expect("Failed to create singleplayer game"),
-                    )
-                }),
-                90.0,
-                520.0,
-                500.0,
-                80.0,
-            )?,
-            GameMenuItem::new_text_item(
-                ctx,
-                "Create Multiplayer Game",
-                Box::new(move |context: &mut Context| {
-                    Box::new(
-                        JoinMultiplayerScene::new(context, puzzle_num, true)
-                            .expect("Failed to create join multiplayer scene"),
-                    )
-                }),
-                90.0,
-                630.0,
-                500.0,
-                80.0,
-            )?,
-        ];
-        puzzle_action_mappings[0].select();
+        let puzzle_action_mappings = GameMenuItemList::new(
+            ctx,
+            vec![
+                NewGameMenuItemData {
+                    variant: NewGameMenuItemDataVariant::TextItem {
+                        text: "Play as Singleplayer".to_string(),
+                    },
+                    next_page: Some(Box::new(move |c| create_singleplayer_game(c, puzzle_num))),
+                },
+                NewGameMenuItemData {
+                    variant: NewGameMenuItemDataVariant::TextItem {
+                        text: "Create Multiplayer Game".to_string(),
+                    },
+                    next_page: Some(Box::new(move |c| create_multiplayer_game(c, puzzle_num))),
+                },
+            ],
+            90.0,
+            // How do we know this position for sure?
+            520.0,
+            500.0,
+            80.0,
+        )?;
         Ok(Self {
-            title_text: Text::new(TextFragment {
-                text: format!("Puzzle {}", puzzle_num + 1),
-                color: Some(Color::BLACK),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(78.0)),
-            }),
+            title_text: UIText::new(
+                format!("Puzzle {}", puzzle_num + 1),
+                Color::BLACK,
+                78.0,
+                DrawablePos { x: 90.0, y: 90.0 },
+            ),
             back: false,
             puzzle_num,
-            puzzle_image: Image::from_path(ctx, format!("/images/{}.jpg", puzzle_num))?,
-            selected_action: 0,
             puzzle_action_mappings,
-            next_page: false,
+            puzzle_image: Image::from_path(ctx, format!("/images/{}.jpg", puzzle_num))?,
         })
     }
 }
@@ -109,57 +107,34 @@ impl PuzzleView {
 impl Drawable for PuzzleView {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut ggez::graphics::Canvas) -> GameResult {
         let scale_factor = 300.0 / self.puzzle_image.width() as f32;
-        let text_dim = self.title_text.measure(ctx)?;
+        let text_dim = self.title_text.text.measure(ctx)?;
         canvas.draw(
             &self.puzzle_image,
             DrawParam::from([90.0, 90.0 + text_dim.y + 20.0]).scale([scale_factor; 2]),
         );
-        for item in &mut self.puzzle_action_mappings {
-            item.draw(ctx, canvas)?;
-        }
-        canvas.draw(&self.title_text, Vec2::new(90.0, 90.0));
+        self.puzzle_action_mappings.draw(ctx, canvas)?;
+        self.title_text.draw(ctx, canvas)?;
         Ok(())
     }
 }
 
 impl Scene for PuzzleView {
     fn handle_key_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) {
-        let mut old_selected = self.selected_action;
-        if let Some(vkeycode) = key_input.keycode {
-            match vkeycode {
-                VirtualKeyCode::Up => {
-                    if self.selected_action > 0 {
-                        self.selected_action -= 1
-                    }
-                }
-                VirtualKeyCode::Down => {
-                    if self.selected_action + 1 < self.puzzle_action_mappings.len() {
-                        self.selected_action += 1
-                    }
-                }
-                VirtualKeyCode::Return => {
-                    self.next_page = true;
-                }
-                VirtualKeyCode::Escape => self.back = true,
-                _ => {}
-            }
+        if let Some(VirtualKeyCode::Escape) = key_input.keycode {
+            self.back = true;
         }
-        if old_selected != self.selected_action {
-            self.puzzle_action_mappings[old_selected].deselect();
-            self.puzzle_action_mappings[self.selected_action].select();
-        }
+        self.puzzle_action_mappings
+            .handle_key_event(ctx, key_input, repeat);
     }
 
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
-        if self.next_page {
-            Some((self.puzzle_action_mappings[self.selected_action].next_page)(ctx))
-        } else if self.back {
-            Some(Box::new(
+        match self.puzzle_action_mappings.next_scene(ctx) {
+            Some(next_scene) => Some(next_scene),
+            None if self.back => Some(Box::new(
                 PuzzleListing::new(ctx, self.puzzle_num / 4)
                     .expect("Failed to return to puzzle listing"),
-            ))
-        } else {
-            None
+            )),
+            None => None,
         }
     }
 }

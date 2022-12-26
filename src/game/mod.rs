@@ -1,3 +1,5 @@
+use self::gmenu::game_menu::GameMenu;
+use self::gmenu::main_menu::MainMenu;
 use self::player::Player;
 use self::scene::Scene;
 use ggez::event;
@@ -13,11 +15,13 @@ use keyframe::functions::EaseInOut;
 use keyframe::keyframes;
 use keyframe::AnimationSequence;
 
+pub mod animation;
 pub mod drawable;
 pub mod gmenu;
 pub mod player;
 pub mod scene;
 pub mod tiles;
+pub mod ui;
 
 #[cfg(feature = "multiplayer")]
 pub mod multiplayer;
@@ -39,7 +43,7 @@ impl GameState {
             current_scene: if intro {
                 Box::new(player::settings_scene::SettingsScene::new(context, true)?)
             } else {
-                Box::new(gmenu::GameMenu::new(context)?)
+                Box::new(GameMenu::new::<MainMenu>(context)?)
             },
             prev_scene: None,
             set_winsize: false,

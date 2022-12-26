@@ -6,20 +6,12 @@
 // Display conn string + copy clipboard + wait for clipboard
 
 use arboard::Clipboard;
-use ggez::{
-    glam::Vec2,
-    graphics::{Color, PxScale, Text, TextFragment},
-    winit::event::VirtualKeyCode,
-    Context, GameError, GameResult,
-};
+use ggez::{graphics::Color, winit::event::VirtualKeyCode, Context, GameError, GameResult};
 use log::info;
 
 use crate::game::{
-    drawable::Drawable,
-    gmenu::{puzzle_listing::PuzzleListing, puzzle_view::PuzzleView},
-    player::PLAYER,
-    scene::Scene,
-    tiles::TileState,
+    animation::DrawablePos, drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER,
+    scene::Scene, ui::uitext::UIText,
 };
 
 use super::{
@@ -29,9 +21,9 @@ use super::{
 pub struct JoinMultiplayerScene {
     connecting: bool,
     creator: bool,
-    wait_for_clipboard: Text,
-    header: Text,
-    conn_string: Option<Text>,
+    wait_for_clipboard: UIText,
+    header: UIText,
+    conn_string: Option<UIText>,
     transport: Option<MultiplayerTransport>,
     clipboard: Clipboard,
     puzzle_num: usize,
@@ -43,36 +35,38 @@ pub struct JoinMultiplayerScene {
 
 impl JoinMultiplayerScene {
     pub fn new(ctx: &mut Context, puzzle_num: usize, creator: bool) -> GameResult<Self> {
+        let header = UIText::new(
+            if creator {
+                "Create Multiplayer Game"
+            } else {
+                "Join Multiplayer Game"
+            }
+            .to_string(),
+            Color::BLACK,
+            58.0,
+            DrawablePos { x: 90.0, y: 90.0 },
+        );
+
         Ok(JoinMultiplayerScene {
             connecting: !creator,
             creator,
-            wait_for_clipboard: Text::new(TextFragment {
-                text: "Press Enter when you have copied\nthe other player's connection string."
+            wait_for_clipboard: UIText::new(
+                "Press Enter when you have copied\nthe other player's connection string."
                     .to_string(),
-                color: Some(Color::BLACK),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(38.0)),
-            }),
-            header: Text::new(TextFragment {
-                text: if creator {
-                    "Create Multiplayer Game"
-                } else {
-                    "Join Multiplayer Game"
-                }
-                .to_string(),
-                color: Some(Color::BLACK),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(58.0)),
-            }),
+                Color::BLACK,
+                38.0,
+                DrawablePos { x: 90.0, y: 0.0 },
+            ),
+            header,
             conn_string: None,
-            puzzle_num,
-            clipboard: Clipboard::new()
-                .map_err(|_| GameError::CustomError("Failed to get game clipboard".to_string()))?,
             transport: if creator {
                 Some(MultiplayerTransport::create_game(None)?)
             } else {
                 None
             },
+            clipboard: Clipboard::new()
+                .map_err(|_| GameError::CustomError("Failed to get game clipboard".to_string()))?,
+            puzzle_num,
             game_cancelled: false,
             game_started: None,
             peer_username: None,
@@ -82,28 +76,20 @@ impl JoinMultiplayerScene {
 
 impl Drawable for JoinMultiplayerScene {
     fn draw(&mut self, ctx: &mut ggez::Context, canvas: &mut ggez::graphics::Canvas) -> GameResult {
-        canvas.draw(&self.header, Vec2::from((90.0, 90.0)));
-        if let Some(conn_str) = &self.conn_string {
-            canvas.draw(
-                conn_str,
-                Vec2::from((90.0, self.header.measure(ctx)?.y + 90.0)),
-            );
+        self.header.draw(ctx, canvas)?;
+        if let Some(conn_str) = &mut self.conn_string {
+            conn_str.draw(ctx, canvas)?;
         }
         if self.connecting {
-            canvas.draw(
-                &self.wait_for_clipboard,
-                Vec2::from((
-                    90.0,
-                    self.header.measure(ctx)?.y
-                        + if let Some(cs) = &self.conn_string {
-                            cs.measure(ctx)?.y
-                        } else {
-                            0.0
-                        }
-                        + 10.0
-                        + 90.0,
-                )),
-            );
+            self.wait_for_clipboard.pos.y = self.header.text.measure(ctx)?.y
+                + if let Some(cs) = &self.conn_string {
+                    cs.text.measure(ctx)?.y
+                } else {
+                    0.0
+                }
+                + 10.0
+                + 90.0;
+            self.wait_for_clipboard.draw(ctx, canvas)?;
         }
         Ok(())
     }
@@ -141,7 +127,7 @@ impl Scene for JoinMultiplayerScene {
         }
     }
 
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+    fn update(&mut self, ctx: &mut Context) -> GameResult {
         if let Some(transport) = &self.transport {
             if let Ok(event) = transport.event_buffer.try_recv() {
                 match event {
@@ -151,12 +137,15 @@ impl Scene for JoinMultiplayerScene {
                                 "Failed to copy connection string to clipboard".to_string(),
                             )
                         })?;
-                        self.conn_string = Some(Text::new(TextFragment {
-                            text: "Copied connection string to clipboard!".to_string(),
-                            color: Some(Color::BLACK),
-                            font: Some("SecularOne-Regular".into()),
-                            scale: Some(PxScale::from(48.0)),
-                        }));
+                        self.conn_string = Some(UIText::new(
+                            "Copied connection string to clipboard!".to_string(),
+                            Color::BLACK,
+                            48.0,
+                            DrawablePos {
+                                x: 90.0,
+                                y: self.header.text.measure(ctx)?.y + 90.0,
+                            },
+                        ));
                         self.connecting = true;
                     }
                     MultiplayerGameMessage::Hello { username } => {

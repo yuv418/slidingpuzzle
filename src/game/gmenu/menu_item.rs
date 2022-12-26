@@ -1,22 +1,25 @@
 use ggez::{
     glam::Vec2,
-    graphics::{self, Color, DrawMode, Image, Mesh, PxScale, Rect, Text, TextFragment},
+    graphics::{self, Color, DrawMode, Image, Mesh, Rect},
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
-use crate::game::{drawable::Drawable as SlidingPuzzleDrawable, scene::Scene};
+use crate::game::{
+    animation::DrawablePos, drawable::Drawable as SlidingPuzzleDrawable, scene::Scene,
+    ui::uitext::UIText,
+};
 
 pub enum GameMenuItemVariant {
     // i.e a button
     TextItem {
-        text_mesh: Text,
+        text_mesh: UIText,
     },
     InputItem {
         is_num: bool,
         text: String,
 
-        prompt_mesh: Text,
+        prompt_mesh: UIText,
 
         // [ prompt [ text ] ] -> inner brackets are what this is for
         text_highlight_rect: Mesh,
@@ -25,7 +28,8 @@ pub enum GameMenuItemVariant {
 
     ImageItem {
         image: Image,
-        caption_mesh: Text,
+        scale_factor: f32,
+        caption_mesh: UIText,
     },
 }
 
@@ -33,12 +37,11 @@ pub enum GameMenuItemVariant {
 // This will become drawable and let us control puzzle listings/settings
 // and hold the meshes for drawing whatever
 pub struct GameMenuItem {
-    pub next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+    pub next_page: Option<Box<dyn Fn(&mut Context) -> Box<dyn Scene>>>,
 
     // Positioning
     // Public for keyframing purposes
-    pub x: f32,
-    pub y: f32,
+    pub pos: DrawablePos,
     w: f32,
     h: f32,
 
@@ -85,19 +88,21 @@ impl GameMenuItem {
         prompt: &str,
         initial_value: String,
         is_num: bool,
-        next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+        next_page: Option<Box<dyn Fn(&mut Context) -> Box<dyn Scene>>>,
         x: f32,
         y: f32,
         w: f32,
         h: f32,
     ) -> GameResult<Self> {
-        let prompt_mesh = Text::new(TextFragment {
-            text: prompt.to_string(),
-            color: Some(Color::WHITE),
-            font: Some("SecularOne-Regular".into()),
-            scale: Some(PxScale::from(38.0)),
-        });
-        let pm_sz = prompt_mesh.measure(ctx)?;
+        let prompt_mesh = UIText::new(
+            prompt.to_string(),
+            Color::WHITE,
+            38.0,
+            DrawablePos {
+                x: x + 20.0,
+                y: y + 10.0,
+            },
+        );
         Self::new(
             ctx,
             next_page,
@@ -139,7 +144,7 @@ impl GameMenuItem {
     pub fn new_text_item(
         ctx: &mut Context,
         text: &str,
-        next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+        next_page: Option<Box<dyn Fn(&mut Context) -> Box<dyn Scene>>>,
         x: f32,
         y: f32,
         w: f32,
@@ -149,12 +154,13 @@ impl GameMenuItem {
             ctx,
             next_page,
             GameMenuItemVariant::TextItem {
-                text_mesh: Text::new(TextFragment {
-                    text: text.to_string(),
-                    color: Some(Color::WHITE),
-                    font: Some("SecularOne-Regular".into()),
-                    scale: Some(PxScale::from(48.0)),
-                }),
+                text_mesh: UIText::new(
+                    text.to_string(),
+                    Color::WHITE,
+                    48.0,
+                    // This is never used. TODO kind of a hack.
+                    Default::default(),
+                ),
             },
             x,
             y,
@@ -166,23 +172,31 @@ impl GameMenuItem {
         ctx: &mut Context,
         image: Image,
         caption: &str,
-        next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+        next_page: Option<Box<dyn Fn(&mut Context) -> Box<dyn Scene>>>,
         x: f32,
         y: f32,
         w: f32,
         h: f32,
     ) -> GameResult<Self> {
+        // Want image to be self.w - 60.0
+        let scale_factor = (w - 60.0) / image.width() as f32;
+        let mesh_y = y + (image.height() as f32 * scale_factor) + 25.0;
+
         Self::new(
             ctx,
             next_page,
             GameMenuItemVariant::ImageItem {
                 image,
-                caption_mesh: Text::new(TextFragment {
-                    text: caption.to_string(),
-                    color: Some(Color::WHITE),
-                    font: Some("SecularOne-Regular".into()),
-                    scale: Some(PxScale::from(28.0)),
-                }),
+                scale_factor,
+                caption_mesh: UIText::new(
+                    caption.to_string(),
+                    Color::WHITE,
+                    28.0,
+                    DrawablePos {
+                        x: x + 20.0,
+                        y: mesh_y,
+                    },
+                ),
             },
             x,
             y,
@@ -193,7 +207,7 @@ impl GameMenuItem {
 
     fn new(
         ctx: &mut Context,
-        next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+        next_page: Option<Box<dyn Fn(&mut Context) -> Box<dyn Scene>>>,
         item_variant: GameMenuItemVariant,
         x: f32,
         y: f32,
@@ -203,8 +217,7 @@ impl GameMenuItem {
         Ok(Self {
             next_page,
             item_variant,
-            x,
-            y,
+            pos: DrawablePos { x, y },
             w,
             h,
             item_box_rect: Mesh::new_rounded_rectangle(
@@ -232,23 +245,17 @@ impl GameMenuItem {
         ]);
         match &mut self.item_variant {
             GameMenuItemVariant::TextItem { text_mesh } => {
-                for frag in text_mesh.fragments_mut() {
+                for frag in text_mesh.text.fragments_mut() {
                     frag.color = Some(Color::BLACK);
                 }
             }
-            GameMenuItemVariant::InputItem {
-                is_num,
-                text,
-                prompt_mesh,
-                text_highlight_rect,
-                selected_text_highlight_rect,
-            } => {
-                for frag in prompt_mesh.fragments_mut() {
+            GameMenuItemVariant::InputItem { prompt_mesh, .. } => {
+                for frag in prompt_mesh.text.fragments_mut() {
                     frag.color = Some(Color::BLACK);
                 }
             }
             GameMenuItemVariant::ImageItem { caption_mesh, .. } => {
-                for frag in caption_mesh.fragments_mut() {
+                for frag in caption_mesh.text.fragments_mut() {
                     frag.color = Some(Color::BLACK);
                 }
             }
@@ -262,24 +269,18 @@ impl GameMenuItem {
         ]);
         match &mut self.item_variant {
             GameMenuItemVariant::TextItem { text_mesh } => {
-                for frag in text_mesh.fragments_mut() {
+                for frag in text_mesh.text.fragments_mut() {
                     frag.color = Some(Color::WHITE);
                 }
             }
 
-            GameMenuItemVariant::InputItem {
-                is_num,
-                text,
-                prompt_mesh,
-                text_highlight_rect,
-                selected_text_highlight_rect,
-            } => {
-                for frag in prompt_mesh.fragments_mut() {
+            GameMenuItemVariant::InputItem { prompt_mesh, .. } => {
+                for frag in prompt_mesh.text.fragments_mut() {
                     frag.color = Some(Color::WHITE);
                 }
             }
             GameMenuItemVariant::ImageItem { caption_mesh, .. } => {
-                for frag in caption_mesh.fragments_mut() {
+                for frag in caption_mesh.text.fragments_mut() {
                     frag.color = Some(Color::WHITE);
                 }
             }
@@ -289,7 +290,7 @@ impl GameMenuItem {
 
 impl SlidingPuzzleDrawable for GameMenuItem {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
-        canvas.draw(&self.item_box_rect, Vec2::new(self.x, self.y));
+        canvas.draw(&self.item_box_rect, Vec2::new(self.pos.x, self.pos.y));
         if self.currently_selected || self.select_animation.is_some() {
             let mut delete_animation = false;
             let selection_box = Mesh::new_rounded_rectangle(
@@ -297,7 +298,7 @@ impl SlidingPuzzleDrawable for GameMenuItem {
                 DrawMode::fill(),
                 Rect {
                     x: 5.0,
-                    y: self.y + 5.0,
+                    y: self.pos.y + 5.0,
                     w: if let Some(se) = &mut self.select_animation {
                         se.advance_by(0.05);
                         if se.finished() {
@@ -315,76 +316,81 @@ impl SlidingPuzzleDrawable for GameMenuItem {
             if delete_animation {
                 self.select_animation = None;
             }
-            canvas.draw(&selection_box, Vec2::new(self.x, 0.0));
+            canvas.draw(&selection_box, Vec2::new(self.pos.x, 0.0));
         }
 
-        match &self.item_variant {
+        match &mut self.item_variant {
             GameMenuItemVariant::TextItem { text_mesh } => {
                 let mt_sz = text_mesh
+                    .text
                     .measure(ctx)
                     .expect("Failed to calculate menu text size");
-                let mt_y = self.y + ((80.0 - mt_sz.y) / 2.0);
+                let mt_y = self.pos.y + ((80.0 - mt_sz.y) / 2.0);
 
-                canvas.draw(text_mesh, graphics::DrawParam::from([self.x + 20.0, mt_y]));
+                canvas.draw(
+                    &text_mesh.text,
+                    graphics::DrawParam::from([self.pos.x + 20.0, mt_y]),
+                );
             }
             GameMenuItemVariant::InputItem {
-                is_num,
                 text,
                 prompt_mesh,
                 text_highlight_rect,
                 selected_text_highlight_rect,
+                ..
             } => {
                 canvas.draw(
-                    prompt_mesh,
-                    graphics::DrawParam::from([self.x + 20.0, self.y + 10.0]),
+                    &prompt_mesh.text,
+                    graphics::DrawParam::from([self.pos.x + 20.0, self.pos.y + 10.0]),
                 );
-                let pm_sz = prompt_mesh.measure(ctx)?;
+                let pm_sz = prompt_mesh.text.measure(ctx)?;
                 canvas.draw(
                     if !self.currently_selected {
                         text_highlight_rect
                     } else {
                         selected_text_highlight_rect
                     },
-                    graphics::DrawParam::from([self.x + 20.0, self.y + pm_sz.y + 20.0]),
+                    graphics::DrawParam::from([self.pos.x + 20.0, self.pos.y + pm_sz.y + 20.0]),
                 );
                 // Draw actual text
-                let text_draw = Text::new(TextFragment {
-                    text: text.clone(),
-                    font: Some("SecularOne-Regular".into()),
-                    scale: Some(PxScale::from(28.0)),
-                    color: Some(if self.currently_selected {
+                let text_draw = UIText::new(
+                    text.to_string(),
+                    if self.currently_selected {
                         Color::WHITE
                     } else {
                         Color::BLACK
-                    }),
-                });
-                let y_off = (30.0 - text_draw.measure(ctx)?.y) / 2.0;
-                canvas.draw(
-                    &text_draw,
-                    graphics::DrawParam::from([self.x + 30.0, self.y + pm_sz.y + 20.0 + y_off]),
+                    },
+                    28.0,
+                    // This doesn't really matter
+                    DrawablePos {
+                        x: self.pos.x + 30.0,
+                        y: 0.0,
+                    },
                 );
+                let y_off = (30.0 - text_draw.text.measure(ctx)?.y) / 2.0;
+                // Kind of suboptimal...
+                let mut text_draw = UIText {
+                    pos: DrawablePos {
+                        y: self.pos.y + pm_sz.y + 20.0 + y_off,
+                        ..text_draw.pos
+                    },
+                    ..text_draw
+                };
+
+                text_draw.draw(ctx, canvas)?;
             }
             GameMenuItemVariant::ImageItem {
                 image,
                 caption_mesh,
+                scale_factor,
             } => {
-                // Want image to be self.w - 60.0
-
-                let scale_factor = (self.w - 60.0) / image.width() as f32;
-
                 canvas.draw(
                     image,
                     // We have to scale the image to fit in the box
-                    graphics::DrawParam::from([self.x + 20.0, self.y + 20.0])
-                        .scale(Vec2::from((scale_factor, scale_factor))),
+                    graphics::DrawParam::from([self.pos.x + 20.0, self.pos.y + 20.0])
+                        .scale(Vec2::from((*scale_factor, *scale_factor))),
                 );
-                canvas.draw(
-                    caption_mesh,
-                    graphics::DrawParam::from([
-                        self.x + 20.0,
-                        self.y + (image.height() as f32 * scale_factor) + 25.0,
-                    ]),
-                );
+                caption_mesh.draw(ctx, canvas)?;
             }
         }
 
