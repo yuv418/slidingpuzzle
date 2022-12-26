@@ -1,3 +1,5 @@
+use self::gmenu::game_menu::GameMenu;
+use self::gmenu::main_menu::MainMenu;
 use self::player::Player;
 use self::scene::Scene;
 use ggez::event;
@@ -39,7 +41,7 @@ impl GameState {
             current_scene: if intro {
                 Box::new(player::settings_scene::SettingsScene::new(context, true)?)
             } else {
-                Box::new(gmenu::GameMenu::new(context)?)
+                Box::new(GameMenu::new::<MainMenu>(context)?)
             },
             prev_scene: None,
             set_winsize: false,

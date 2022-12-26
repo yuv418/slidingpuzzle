@@ -11,7 +11,7 @@ use crate::game::{
 
 #[cfg(feature = "multiplayer")]
 use super::super::multiplayer::join_scene::JoinMultiplayerScene;
-use super::{menu_item::GameMenuItem, GameMenu};
+use super::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem};
 
 #[derive(Debug)]
 enum PaginationDirection {
@@ -52,7 +52,8 @@ impl PuzzleListing {
                         ctx,
                         Image::from_path(ctx, puzzle_path)?,
                         &format!("Puzzle {}", puzzle_num + 1),
-                        Box::new(super::next_page),
+                        // This should never happen, so we can panic if it does.
+                        Box::new(|_| -> Box<dyn Scene> { panic!() }),
                         45.0 + (j as f32 * 320.0),
                         55.0 + t_sz.y + (i as f32 * 320.0),
                         300.0,
@@ -163,7 +164,7 @@ impl Scene for PuzzleListing {
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {
         if self.back {
             return Some(Box::new(
-                GameMenu::new(ctx).expect("Failed to launch game menu"),
+                GameMenu::new::<MainMenu>(ctx).expect("Failed to launch game menu"),
             ));
         } else if self.start_game {
             let opt_player = PLAYER.lock().unwrap();

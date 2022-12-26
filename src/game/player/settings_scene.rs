@@ -8,7 +8,7 @@ use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
     drawable::Drawable,
-    gmenu::{menu_item::GameMenuItem, GameMenu},
+    gmenu::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem},
     scene::Scene,
 };
 
@@ -247,13 +247,7 @@ impl Drawable for SettingsScene {
     }
 }
 impl Scene for SettingsScene {
-    fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {
-        // Will always be the case (for now). We don't want spaces.
-        // This is not the best solution, but it is a solution.
-        if c != ' ' {
-            self.options[self.selected_option].handle_input(c)
-        }
-    }
+    fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {}
     fn handle_key_event(
         &mut self,
         ctx: &mut ggez::Context,
@@ -303,7 +297,7 @@ impl Scene for SettingsScene {
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {
         if self.advance_scene {
             Some(Box::new(
-                GameMenu::new(ctx).expect("Failed to create game menu"),
+                GameMenu::new::<MainMenu>(ctx).expect("Failed to create game menu"),
             ))
         } else {
             None
