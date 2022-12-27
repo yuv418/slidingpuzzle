@@ -3,14 +3,13 @@ use ggez::Context;
 use crate::game::{
     multiplayer::join_scene::JoinMultiplayerScene,
     player::{settings_scene::SettingsScene, PLAYER},
+    puzzle::{puzzle_listing::PuzzleListing, tiles::TileState},
     scene::Scene,
-    tiles::TileState,
 };
 
 use super::{
     game_menu::GameMenuData,
     menu_item_list::{NewGameMenuItemData, NewGameMenuItemDataVariant},
-    puzzle_listing::PuzzleListing,
 };
 
 pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {

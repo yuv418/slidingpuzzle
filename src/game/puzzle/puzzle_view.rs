@@ -20,13 +20,14 @@ use ggez::{
 };
 
 use crate::game::{
-    animation::DrawablePos, drawable::Drawable, multiplayer::join_scene::JoinMultiplayerScene,
-    player::PLAYER, scene::Scene, tiles::TileState, ui::uitext::UIText,
-};
-
-use super::{
-    menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
-    puzzle_listing::PuzzleListing,
+    animation::DrawablePos,
+    drawable::Drawable,
+    gmenu::menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
+    multiplayer::join_scene::JoinMultiplayerScene,
+    player::PLAYER,
+    puzzle::{puzzle_listing::PuzzleListing, tiles::TileState},
+    scene::Scene,
+    ui::uitext::UIText,
 };
 
 pub struct PuzzleView {

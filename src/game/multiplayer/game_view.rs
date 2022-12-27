@@ -10,8 +10,12 @@ use ggez::{
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
-    animation::DrawablePos, drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER,
-    scene::Scene, tiles::TileState, ui::uitext::UIText,
+    animation::DrawablePos,
+    drawable::Drawable,
+    player::PLAYER,
+    puzzle::{puzzle_view::PuzzleView, tiles::TileState},
+    scene::Scene,
+    ui::uitext::UIText,
 };
 
 use super::transport::MultiplayerTransport;

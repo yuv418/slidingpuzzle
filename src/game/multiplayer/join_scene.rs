@@ -10,7 +10,7 @@ use ggez::{graphics::Color, winit::event::VirtualKeyCode, Context, GameError, Ga
 use log::info;
 
 use crate::game::{
-    animation::DrawablePos, drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER,
+    animation::DrawablePos, drawable::Drawable, player::PLAYER, puzzle::puzzle_view::PuzzleView,
     scene::Scene, ui::uitext::UIText,
 };
 

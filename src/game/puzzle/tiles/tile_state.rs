@@ -14,9 +14,9 @@ use ggez::{
 
 use crate::game::{
     drawable::Drawable,
-    gmenu::puzzle_listing::PuzzleListing,
     multiplayer::{transport::MultiplayerTransport, MultiplayerGameMessage},
     player::{Player, PuzzleStatistics, PLAYER},
+    puzzle::puzzle_listing::PuzzleListing,
     scene::Scene,
 };
 

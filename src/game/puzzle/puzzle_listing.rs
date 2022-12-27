@@ -5,11 +5,14 @@ use ggez::{
 };
 
 use crate::game::{
-    animation::DrawablePos, drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER,
-    scene::Scene, tiles::TileState, ui::uitext::UIText,
+    animation::DrawablePos,
+    drawable::Drawable,
+    gmenu::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem},
+    player::PLAYER,
+    puzzle::{puzzle_view::PuzzleView, tiles::TileState},
+    scene::Scene,
+    ui::uitext::UIText,
 };
-
-use super::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem};
 
 #[derive(Debug)]
 enum PaginationDirection {
