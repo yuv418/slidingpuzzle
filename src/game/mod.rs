@@ -15,11 +15,13 @@ use keyframe::functions::EaseInOut;
 use keyframe::keyframes;
 use keyframe::AnimationSequence;
 
+pub mod animation;
 pub mod drawable;
 pub mod gmenu;
 pub mod player;
 pub mod scene;
 pub mod tiles;
+pub mod ui;
 
 #[cfg(feature = "multiplayer")]
 pub mod multiplayer;

@@ -25,7 +25,6 @@ pub struct GameMenu {
     to_next_scene: bool,
 
     title_text: Text,
-    below_menu_text: Text,
 }
 
 impl GameMenu {
@@ -35,12 +34,6 @@ impl GameMenu {
             color: Some(Color::BLACK),
             font: Some("SecularOne-Regular".into()),
             scale: Some(PxScale::from(78.0)),
-        });
-        let below_menu_text = Text::new(TextFragment {
-            text: T::title(),
-            color: Some(Color::BLACK),
-            font: Some("SecularOne-Regular".into()),
-            scale: Some(PxScale::from(58.0)),
         });
 
         let tx_s = title_text.measure(ctx)?;
@@ -54,7 +47,6 @@ impl GameMenu {
                 80.0,
             )?,
             title_text,
-            below_menu_text,
             currently_selected: 0,
             to_next_scene: false,
         })
@@ -68,11 +60,6 @@ impl SlidingPuzzleDrawable for GameMenu {
             graphics::DrawParam::from([90.0, 90.0]).color(Color::BLACK),
         );
         self.menu_mappings.draw(ctx, canvas)?;
-
-        canvas.draw(
-            &self.below_menu_text,
-            graphics::DrawParam::from([90.0, self.menu_mappings.height()]).color(Color::BLACK),
-        );
 
         Ok(())
     }

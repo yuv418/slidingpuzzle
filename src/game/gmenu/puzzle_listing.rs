@@ -53,7 +53,7 @@ impl PuzzleListing {
                         Image::from_path(ctx, puzzle_path)?,
                         &format!("Puzzle {}", puzzle_num + 1),
                         // This should never happen, so we can panic if it does.
-                        Box::new(|_| -> Box<dyn Scene> { panic!() }),
+                        Some(Box::new(|_| -> Box<dyn Scene> { panic!() })),
                         45.0 + (j as f32 * 320.0),
                         55.0 + t_sz.y + (i as f32 * 320.0),
                         300.0,

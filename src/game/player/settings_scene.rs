@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use ggez::{
     glam::Vec2,
     graphics::{Color, PxScale, Text, TextFragment},
@@ -7,32 +9,39 @@ use ggez::{
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
+    animation::{animation::Animation, DrawablePos},
     drawable::Drawable,
-    gmenu::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem},
+    gmenu::{
+        game_menu::GameMenu,
+        main_menu::MainMenu,
+        menu_item::GameMenuItem,
+        menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
+    },
     scene::Scene,
+    ui::uitext::UIText,
 };
 
 use super::{Player, PlayerSettings, PLAYER};
 
 pub struct SettingsScene {
     intro: bool,
-    intro_animation: AnimationSequence<f32>,
-    greeting: Text,
+    intro_animation: Option<Animation<DrawablePos>>,
+    greeting: Rc<RefCell<UIText>>,
+    enter_confirm: Rc<RefCell<UIText>>,
+    welcome: Rc<RefCell<UIText>>,
+
     greeting_visible: bool,
-    welcome: Text,
     welcome_visible: bool,
-    enter_confirm: Text,
     enter_confirm_visible: bool,
 
     menu_visible: bool,
 
     // Menu options
-    options: Vec<GameMenuItem>,
-    selected_option: usize,
+    options: Rc<RefCell<GameMenuItemList>>,
 
     advance_scene: bool,
 
-    main: Text,
+    main: UIText,
 }
 
 const INPUT_BOX_HEIGHT: f32 = 110.0;
@@ -40,8 +49,9 @@ const INPUT_BOX_HEIGHT: f32 = 110.0;
 impl SettingsScene {
     pub fn save_configuration(&mut self, ctx: &mut Context) -> GameResult {
         // Should be safe to unwrap here due to prior parsing
-        let username = self.options[0].get_input_value().unwrap();
-        let num_rows_cols = self.options[1].get_input_value().unwrap().parse().unwrap();
+        let mut options = self.options.borrow_mut();
+        let username = options.items[0].get_input_value().unwrap();
+        let num_rows_cols = options.items[1].get_input_value().unwrap().parse().unwrap();
 
         let mut opt_player = PLAYER.lock().unwrap();
         match &mut *opt_player {
@@ -60,84 +70,116 @@ impl SettingsScene {
         Ok(())
     }
     pub fn new(ctx: &mut Context, intro: bool) -> GameResult<Self> {
-        let title_fragment = TextFragment {
-            text: "".to_string(),
-            color: Some(Color::BLACK),
-            font: Some("SecularOne-Regular".into()),
-            scale: Some(PxScale::from(58.0)),
-        };
-        let welcome = Text::new(TextFragment {
-            text: "Welcome to Sliding Puzzle.".to_string(),
-            ..title_fragment.clone()
-        });
-        let w_sz = welcome.measure(ctx)?;
-        let opt_player = PLAYER.lock().unwrap();
-        let mut options = vec![
-            GameMenuItem::new_input_item(
-                ctx,
-                "Username",
-                if let Some(player) = opt_player.as_ref() {
-                    player.username.clone()
-                } else {
-                    "".to_string()
-                },
-                false,
-                // Will never get called
-                Box::new(|_| panic!()),
-                0.0,
-                0.0, // Doesn't matter
-                w_sz.x,
-                INPUT_BOX_HEIGHT,
-            )?,
-            GameMenuItem::new_input_item(
-                ctx,
-                "Board Size",
-                if let Some(player) = opt_player.as_ref() {
-                    format!("{}", player.player_settings.num_rows_cols)
-                } else {
-                    "".to_string()
-                },
-                true,
-                // Will never get called
-                Box::new(|_| panic!()),
-                0.0,
-                0.0, // Doesn't matter
-                w_sz.x,
-                INPUT_BOX_HEIGHT,
-            )?,
-        ];
+        let greeting = Rc::new(RefCell::new(UIText::new(
+            "Hi!".to_string(),
+            Color::BLACK,
+            58.8,
+            DrawablePos { x: 90.0, y: 90.0 },
+        )));
+        let g_sz = greeting.borrow().text.measure(ctx)?;
 
-        if !intro {
-            options[0].select();
+        let welcome = Rc::new(RefCell::new(UIText::new(
+            "Welcome to Sliding Puzzle!".to_string(),
+            Color::BLACK,
+            58.8,
+            DrawablePos {
+                x: 90.0,
+                y: g_sz.y + 90.0,
+            },
+        )));
+        let w_sz = welcome.borrow().text.measure(ctx)?;
+
+        let opt_player = PLAYER.lock().unwrap();
+
+        let o_y = g_sz.y + if intro { w_sz.y } else { 0.0 } + 120.0;
+        let options = Rc::new(RefCell::new(GameMenuItemList::new(
+            ctx,
+            vec![
+                NewGameMenuItemData {
+                    variant: NewGameMenuItemDataVariant::InputItem {
+                        prompt: "Username".to_string(),
+                        is_num: false,
+                        initial_value: if let Some(player) = opt_player.as_ref() {
+                            format!("{}", player.player_settings.num_rows_cols)
+                        } else {
+                            "".to_string()
+                        },
+                    },
+                    next_page: None,
+                },
+                NewGameMenuItemData {
+                    variant: NewGameMenuItemDataVariant::InputItem {
+                        prompt: "Board Size".to_string(),
+                        is_num: true,
+                        initial_value: if let Some(player) = opt_player.as_ref() {
+                            format!("{}", player.player_settings.num_rows_cols)
+                        } else {
+                            "".to_string()
+                        },
+                    },
+                    next_page: None,
+                },
+            ],
+            90.0,
+            o_y,
+            w_sz.x,
+            INPUT_BOX_HEIGHT,
+        )?));
+
+        let enter_confirm = Rc::new(RefCell::new(UIText::new(
+            "Press Enter to Confirm.".to_string(),
+            Color::BLACK,
+            58.8,
+            DrawablePos {
+                x: 90.0,
+                y: o_y + 50.0 + options.borrow().height(),
+            },
+        )));
+
+        // This doesn't work.
+        if intro {
+            // options.items[0].deselect();
         }
 
+        let anim_frames = |y: f32| {
+            keyframes![
+                // I realize this first one is kind of a hack.
+                (DrawablePos { x: -2000.0, y }, 0.0, EaseInOut),
+                (DrawablePos { x: 90.0, y }, 1.0, EaseInOut),
+                (DrawablePos { x: 90.0, y }, 2.0, EaseInOut)
+            ]
+        };
+
+        let greeting_y = greeting.clone().borrow().pos.y;
+        let welcome_y = welcome.clone().borrow().pos.y;
+        let enter_confirm_y = enter_confirm.clone().borrow().pos.y;
         Ok(SettingsScene {
             intro,
-            intro_animation: keyframes![
-                (0.0, 0.0, EaseInOut),
-                (90.0, 1.0, EaseInOut),
-                (90.0, 2.0, EaseInOut)
-            ],
-            options,
-            greeting_visible: false,
-            greeting: Text::new(TextFragment {
-                text: "Hi!".to_string(),
-                ..title_fragment.clone()
-            }),
+            intro_animation: if intro {
+                Some(Animation::new(vec![
+                    (enter_confirm.clone(), anim_frames(enter_confirm_y)),
+                    (options.clone(), anim_frames(o_y)),
+                    (welcome.clone(), anim_frames(welcome_y)),
+                    (greeting.clone(), anim_frames(greeting_y)),
+                ]))
+            } else {
+                None
+            },
+            greeting,
+            enter_confirm,
             welcome,
+            greeting_visible: false,
             welcome_visible: false,
-            main: Text::new(TextFragment {
-                text: "Settings".to_string(),
-                ..title_fragment.clone()
-            }),
-            selected_option: 0,
-            menu_visible: false,
-            enter_confirm: Text::new(TextFragment {
-                text: "Press Enter to save.".to_string(),
-                ..title_fragment.clone()
-            }),
             enter_confirm_visible: false,
+            menu_visible: false,
+            options,
             advance_scene: false,
+            main: UIText::new(
+                "Settings".to_string(),
+                Color::BLACK,
+                58.8,
+                DrawablePos { x: 90.0, y: 90.0 },
+            ),
         })
     }
 }
@@ -148,150 +190,49 @@ impl Drawable for SettingsScene {
         ctx: &mut ggez::Context,
         canvas: &mut ggez::graphics::Canvas,
     ) -> ggez::GameResult {
-        if self.intro {
-            if !self.greeting_visible {
-                self.intro_animation.advance_by(0.05);
-                canvas.draw(&self.greeting, Vec2::new(self.intro_animation.now(), 90.0));
-                if self.intro_animation.finished() {
-                    self.greeting_visible = true;
-                    self.intro_animation.advance_to(0.0);
-                }
-            } else {
-                canvas.draw(&self.greeting, Vec2::new(90.0, 90.0));
-            }
-
-            if self.greeting_visible && !self.welcome_visible {
-                self.intro_animation.advance_by(0.05);
-                canvas.draw(
-                    &self.welcome,
-                    Vec2::new(
-                        self.intro_animation.now(),
-                        self.greeting.measure(ctx)?.y + 90.0,
-                    ),
-                );
-                if self.intro_animation.finished() {
-                    self.welcome_visible = true;
-                    self.intro_animation.advance_to(0.0);
-                }
-            } else if self.greeting_visible && self.welcome_visible {
-                canvas.draw(
-                    &self.welcome,
-                    Vec2::new(90.0, self.greeting.measure(ctx)?.y + 90.0),
-                );
-
-                for i in 0..self.options.len() {
-                    // This should be done earlier
-                    self.options[i].y = self.greeting.measure(ctx)?.y
-                        + self.welcome.measure(ctx)?.y
-                        + 120.0
-                        + ((INPUT_BOX_HEIGHT + 20.0) * i as f32);
-                    if !self.menu_visible {
-                        self.intro_animation.advance_by(0.05);
-                        self.options[i].x = self.intro_animation.now();
-                    }
-                    if self.intro_animation.finished() {
-                        self.intro_animation.advance_to(0.0);
-                        self.menu_visible = true;
-                    }
-                    self.options[i].draw(ctx, canvas)?;
-                }
-                if self.menu_visible {
-                    canvas.draw(
-                        &self.enter_confirm,
-                        Vec2::new(
-                            if self.enter_confirm_visible {
-                                90.0
-                            } else {
-                                self.intro_animation.advance_by(0.05);
-                                let p = self.intro_animation.now();
-                                if self.intro_animation.finished() {
-                                    self.intro_animation.advance_to(0.0);
-                                    self.enter_confirm_visible = true;
-                                    self.options[self.selected_option].select();
-                                }
-
-                                p
-                            },
-                            self.greeting.measure(ctx)?.y
-                                + self.welcome.measure(ctx)?.y
-                                + 170.0
-                                + ((INPUT_BOX_HEIGHT + 20.0) * self.options.len() as f32),
-                        ),
-                    )
-                }
-            }
-        } else {
-            canvas.draw(&self.main, Vec2::new(90.0, 90.0));
-
-            for i in 0..self.options.len() {
-                // This should be done earlier
-                self.options[i].y = self.greeting.measure(ctx)?.y
-                    + self.welcome.measure(ctx)?.y
-                    + 100.0
-                    + ((INPUT_BOX_HEIGHT + 20.0) * i as f32);
-                self.options[i].x = 90.0;
-                self.options[i].draw(ctx, canvas)?;
-            }
-
-            canvas.draw(
-                &self.enter_confirm,
-                Vec2::new(
-                    90.0,
-                    self.main.measure(ctx)?.y
-                        + 200.0
-                        + ((INPUT_BOX_HEIGHT + 20.0) * self.options.len() as f32),
-                ),
-            )
+        if let Some(anim) = &mut self.intro_animation {
+            anim.advance(0.05);
         }
+
+        if self.intro {
+            self.greeting.borrow_mut().draw(ctx, canvas)?;
+            self.welcome.borrow_mut().draw(ctx, canvas)?;
+        } else {
+            self.main.draw(ctx, canvas)?;
+        }
+        self.options.borrow_mut().draw(ctx, canvas)?;
+        self.enter_confirm.borrow_mut().draw(ctx, canvas)?;
+
         Ok(())
     }
 }
 impl Scene for SettingsScene {
-    fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {}
+    fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) {
+        self.options.borrow_mut().text_input_event(ctx, c);
+    }
     fn handle_key_event(
         &mut self,
         ctx: &mut ggez::Context,
         key_input: ggez::input::keyboard::KeyInput,
-        _repeat: bool,
+        repeat: bool,
     ) {
-        if let Some(vkeycode) = key_input.keycode {
-            let old_option = self.selected_option;
-            match vkeycode {
-                KeyCode::Up => {
-                    if self.selected_option > 0 {
-                        self.selected_option -= 1;
-                    }
+        if let Some(KeyCode::Return) = key_input.keycode {
+            let mut valid_inputs = true;
+            for option in &mut self.options.borrow_mut().items {
+                // Always unwrap since all of them are input boxes
+                if option.get_input_value().unwrap().is_empty() {
+                    valid_inputs = false
                 }
-                KeyCode::Down => {
-                    if self.selected_option < self.options.len() - 1 {
-                        self.selected_option += 1;
-                    }
-                }
-                KeyCode::Return => {
-                    let mut valid_inputs = true;
-                    for option in &mut self.options {
-                        // Always unwrap since all of them are input boxes
-                        if option.get_input_value().unwrap().is_empty() {
-                            valid_inputs = false
-                        }
-                    }
-                    if valid_inputs {
-                        self.save_configuration(ctx)
-                            .expect("Failed to save configuration");
-                    }
-                }
-                KeyCode::Escape => {
-                    // Don't save anything
-                    self.advance_scene = true;
-                }
-                _ => {}
             }
-
-            if old_option != self.selected_option {
-                self.options[old_option].deselect();
-                self.options[self.selected_option].select();
+            if valid_inputs {
+                self.save_configuration(ctx)
+                    .expect("Failed to save configuration");
             }
         }
+        // TODO make sure to handle this only if the opening animations have finished
+        self.options
+            .borrow_mut()
+            .handle_key_event(ctx, key_input, repeat);
     }
 
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {

@@ -16,6 +16,7 @@ use ggez::{
     glam::Vec2,
     graphics::{Color, DrawParam, Image, PxScale, Text, TextFragment},
     input::keyboard::KeyInput,
+    winit::{event::VirtualKeyCode, platform::unix::x11::ffi::KeyCode},
     Context, GameResult,
 };
 
@@ -74,13 +75,13 @@ impl PuzzleView {
                     variant: NewGameMenuItemDataVariant::TextItem {
                         text: "Play as Singleplayer".to_string(),
                     },
-                    next_page: Box::new(move |c| create_singleplayer_game(c, puzzle_num)),
+                    next_page: Some(Box::new(move |c| create_singleplayer_game(c, puzzle_num))),
                 },
                 NewGameMenuItemData {
                     variant: NewGameMenuItemDataVariant::TextItem {
                         text: "Create Multiplayer Game".to_string(),
                     },
-                    next_page: Box::new(move |c| create_multiplayer_game(c, puzzle_num)),
+                    next_page: Some(Box::new(move |c| create_multiplayer_game(c, puzzle_num))),
                 },
             ],
             90.0,
@@ -112,7 +113,7 @@ impl Drawable for PuzzleView {
             &self.puzzle_image,
             DrawParam::from([90.0, 90.0 + text_dim.y + 20.0]).scale([scale_factor; 2]),
         );
-        self.puzzle_action_mappings.draw(ctx, canvas);
+        self.puzzle_action_mappings.draw(ctx, canvas)?;
         canvas.draw(&self.title_text, Vec2::new(90.0, 90.0));
         Ok(())
     }
@@ -120,6 +121,9 @@ impl Drawable for PuzzleView {
 
 impl Scene for PuzzleView {
     fn handle_key_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) {
+        if let Some(VirtualKeyCode::Escape) = key_input.keycode {
+            self.back = true;
+        }
         self.puzzle_action_mappings
             .handle_key_event(ctx, key_input, repeat);
     }
@@ -127,11 +131,11 @@ impl Scene for PuzzleView {
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
         match self.puzzle_action_mappings.next_scene(ctx) {
             Some(next_scene) => Some(next_scene),
-            None => None,
             None if self.back => Some(Box::new(
                 PuzzleListing::new(ctx, self.puzzle_num / 4)
                     .expect("Failed to return to puzzle listing"),
             )),
+            None => None,
         }
     }
 }

@@ -2,7 +2,11 @@ use ggez::{
     graphics::Image, input::keyboard::KeyInput, winit::event::VirtualKeyCode, Context, GameResult,
 };
 
-use crate::game::{drawable::Drawable, scene::Scene};
+use crate::game::{
+    animation::{animatable::Animatable, DrawablePos},
+    drawable::Drawable,
+    scene::Scene,
+};
 
 use super::menu_item::GameMenuItem;
 
@@ -22,18 +26,18 @@ pub enum NewGameMenuItemDataVariant {
 }
 pub struct NewGameMenuItemData {
     pub variant: NewGameMenuItemDataVariant,
-    pub next_page: Box<dyn Fn(&mut Context) -> Box<dyn Scene>>,
+    pub next_page: Option<Box<dyn Fn(&mut Context) -> Box<dyn Scene>>>,
 }
 
 pub struct GameMenuItemList {
-    items: Vec<GameMenuItem>,
+    pub items: Vec<GameMenuItem>,
     selected_item: usize,
     has_next_scene: bool,
     w: f32,
     h: f32,
 }
 
-const MENU_ITEM_GAP: f32 = 100.0;
+const MENU_ITEM_GAP: f32 = 30.0;
 
 impl GameMenuItemList {
     pub fn new(
@@ -48,7 +52,7 @@ impl GameMenuItemList {
             .into_iter()
             .enumerate()
             .map(|(i, e)| {
-                let y = start_y + (MENU_ITEM_GAP * i as f32);
+                let y = start_y + ((MENU_ITEM_GAP + h) * i as f32);
                 match e.variant {
                     NewGameMenuItemDataVariant::TextItem { text } => {
                         GameMenuItem::new_text_item(ctx, &text, e.next_page, x, y, w, h)
@@ -88,7 +92,8 @@ impl GameMenuItemList {
     }
 
     pub fn height(&self) -> f32 {
-        self.w * (self.items.len() as f32 + MENU_ITEM_GAP)
+        // Count 1 less menu item gap
+        (self.h + MENU_ITEM_GAP) * self.items.len() as f32 - MENU_ITEM_GAP
     }
 }
 
@@ -131,7 +136,11 @@ impl Scene for GameMenuItemList {
 
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
         if self.has_next_scene {
-            Some((self.items[self.selected_item].next_page)(ctx))
+            if let Some(next_page) = &self.items[self.selected_item].next_page {
+                Some((next_page)(ctx))
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -142,6 +151,15 @@ impl Scene for GameMenuItemList {
         // This is not the best solution, but it is a solution.
         if c != ' ' {
             self.items[self.selected_item].handle_input(c)
+        }
+    }
+}
+
+impl Animatable<DrawablePos> for GameMenuItemList {
+    fn set_state(&mut self, now: DrawablePos) {
+        for (i, mut e) in self.items.iter_mut().enumerate() {
+            e.pos.y = now.y + ((MENU_ITEM_GAP + self.h) * i as f32);
+            e.pos.x = now.x;
         }
     }
 }

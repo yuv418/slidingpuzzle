@@ -72,25 +72,25 @@ impl GameMenuData for MainMenu {
                 variant: NewGameMenuItemDataVariant::TextItem {
                     text: "Continue".to_string(),
                 },
-                next_page: Box::new(continue_game),
+                next_page: Some(Box::new(continue_game)),
             },
             NewGameMenuItemData {
                 variant: NewGameMenuItemDataVariant::TextItem {
                     text: "Join Multiplayer".to_string(),
                 },
-                next_page: Box::new(join_multiplayer),
+                next_page: Some(Box::new(join_multiplayer)),
             },
             NewGameMenuItemData {
                 variant: NewGameMenuItemDataVariant::TextItem {
                     text: "Choose a Puzzle".to_string(),
                 },
-                next_page: Box::new(choose_puzzle),
+                next_page: Some(Box::new(choose_puzzle)),
             },
             NewGameMenuItemData {
                 variant: NewGameMenuItemDataVariant::TextItem {
                     text: "Settings".to_string(),
                 },
-                next_page: Box::new(settings_scene),
+                next_page: Some(Box::new(settings_scene)),
             },
         ]
     }
