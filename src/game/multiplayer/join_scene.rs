@@ -97,11 +97,8 @@ impl Drawable for JoinMultiplayerScene {
 
 impl Scene for JoinMultiplayerScene {
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
-        if let Some(MultiplayerGameMessage::StartGame {
-            img_num,
-            num_rows_cols,
-            host_username,
-        }) = &self.game_started
+        if let Some(MultiplayerGameMessage::StartGame { img_num, num_rows_cols, host_username }) =
+            &self.game_started
         {
             let transport = self.transport.take().unwrap();
             Some(Box::new(
@@ -141,10 +138,7 @@ impl Scene for JoinMultiplayerScene {
                             "Copied connection string to clipboard!".to_string(),
                             Color::BLACK,
                             48.0,
-                            DrawablePos {
-                                x: 90.0,
-                                y: self.header.text.measure(ctx)?.y + 90.0,
-                            },
+                            DrawablePos { x: 90.0, y: self.header.text.measure(ctx)?.y + 90.0 },
                         ));
                         self.connecting = true;
                     }

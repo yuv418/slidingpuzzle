@@ -69,10 +69,7 @@ impl SettingsScene {
             "Welcome to Sliding Puzzle!".to_string(),
             Color::BLACK,
             58.8,
-            DrawablePos {
-                x: 90.0,
-                y: g_sz.y + 90.0,
-            },
+            DrawablePos { x: 90.0, y: g_sz.y + 90.0 },
         )));
         let w_sz = welcome.borrow().text.measure(ctx)?;
 
@@ -117,10 +114,7 @@ impl SettingsScene {
             "Press Enter to Confirm.".to_string(),
             Color::BLACK,
             58.8,
-            DrawablePos {
-                x: 90.0,
-                y: o_y + 50.0 + options.borrow().height(),
-            },
+            DrawablePos { x: 90.0, y: o_y + 50.0 + options.borrow().height() },
         )));
 
         // This doesn't work.

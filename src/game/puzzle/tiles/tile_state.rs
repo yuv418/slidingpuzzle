@@ -373,11 +373,7 @@ impl Scene for TileState {
                         Ok(msg) => {
                             trace!("recv tile msg {:?}", msg);
                             match msg {
-                                MultiplayerGameMessage::SwapTiles {
-                                    i1j1,
-                                    i2j2,
-                                    duration,
-                                } => {
+                                MultiplayerGameMessage::SwapTiles { i1j1, i2j2, duration } => {
                                     self.swap_ref_tiles(i1j1, i2j2, duration);
                                     if !self.game_started {
                                         self.total_tiles_swapped += 1;

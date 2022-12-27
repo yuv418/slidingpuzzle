@@ -110,10 +110,7 @@ impl MultiplayerGameView {
                 peer_username,
                 Color::BLACK,
                 38.0,
-                DrawablePos {
-                    x: 90.0 + 835.0,
-                    y: 90.0,
-                },
+                DrawablePos { x: 90.0 + 835.0, y: 90.0 },
             ),
             game_cancelled: false,
         })

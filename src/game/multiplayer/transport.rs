@@ -1,14 +1,11 @@
-use std::{sync::Arc};
+use std::sync::Arc;
 
 use ggez::{GameError, GameResult};
 use log::trace;
-use serde::{de::DeserializeOwned};
+use serde::de::DeserializeOwned;
 use webrtc::{
     api::{interceptor_registry, media_engine::MediaEngine, APIBuilder},
-    data_channel::{
-        data_channel_message::DataChannelMessage,
-        RTCDataChannel,
-    },
+    data_channel::{data_channel_message::DataChannelMessage, RTCDataChannel},
     ice_transport::ice_server::RTCIceServer,
     interceptor::registry::Registry,
     peer_connection::{
@@ -282,9 +279,6 @@ impl MultiplayerTransport {
                 .unwrap();
         });
 
-        Ok(Self {
-            event_buffer: push_rx,
-            event_push_buffer: tx,
-        })
+        Ok(Self { event_buffer: push_rx, event_push_buffer: tx })
     }
 }

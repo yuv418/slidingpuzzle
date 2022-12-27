@@ -92,11 +92,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 DrawMode::fill(),
                 Rect {
                     x: 0.0,
-                    y: if seq.progress() > 0.5 {
-                        drawable_size.1 - seq.now()
-                    } else {
-                        0.0
-                    },
+                    y: if seq.progress() > 0.5 { drawable_size.1 - seq.now() } else { 0.0 },
                     w: drawable_size.0,
                     h: seq.now(),
                 },

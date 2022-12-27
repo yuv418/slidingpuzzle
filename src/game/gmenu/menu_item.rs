@@ -98,10 +98,7 @@ impl GameMenuItem {
             prompt.to_string(),
             Color::WHITE,
             38.0,
-            DrawablePos {
-                x: x + 20.0,
-                y: y + 10.0,
-            },
+            DrawablePos { x: x + 20.0, y: y + 10.0 },
         );
         Self::new(
             ctx,
@@ -113,24 +110,14 @@ impl GameMenuItem {
                 text_highlight_rect: Mesh::new_rounded_rectangle(
                     ctx,
                     DrawMode::fill(),
-                    Rect {
-                        x: 0.0,
-                        y: 0.0,
-                        w: w * 0.8,
-                        h: 30.0,
-                    },
+                    Rect { x: 0.0, y: 0.0, w: w * 0.8, h: 30.0 },
                     5.0,
                     Color::WHITE,
                 )?,
                 selected_text_highlight_rect: Mesh::new_rounded_rectangle(
                     ctx,
                     DrawMode::fill(),
-                    Rect {
-                        x: 0.0,
-                        y: 0.0,
-                        w: w * 0.8,
-                        h: 30.0,
-                    },
+                    Rect { x: 0.0, y: 0.0, w: w * 0.8, h: 30.0 },
                     5.0,
                     Color::BLACK,
                 )?,
@@ -192,10 +179,7 @@ impl GameMenuItem {
                     caption.to_string(),
                     Color::WHITE,
                     28.0,
-                    DrawablePos {
-                        x: x + 20.0,
-                        y: mesh_y,
-                    },
+                    DrawablePos { x: x + 20.0, y: mesh_y },
                 ),
             },
             x,
@@ -223,12 +207,7 @@ impl GameMenuItem {
             item_box_rect: Mesh::new_rounded_rectangle(
                 ctx,
                 DrawMode::fill(),
-                Rect {
-                    x: 0.0,
-                    y: 0.0,
-                    w,
-                    h,
-                },
+                Rect { x: 0.0, y: 0.0, w, h },
                 8.0,
                 Color::BLACK,
             )?,
@@ -355,35 +334,21 @@ impl SlidingPuzzleDrawable for GameMenuItem {
                 // Draw actual text
                 let text_draw = UIText::new(
                     text.to_string(),
-                    if self.currently_selected {
-                        Color::WHITE
-                    } else {
-                        Color::BLACK
-                    },
+                    if self.currently_selected { Color::WHITE } else { Color::BLACK },
                     28.0,
                     // This doesn't really matter
-                    DrawablePos {
-                        x: self.pos.x + 30.0,
-                        y: 0.0,
-                    },
+                    DrawablePos { x: self.pos.x + 30.0, y: 0.0 },
                 );
                 let y_off = (30.0 - text_draw.text.measure(ctx)?.y) / 2.0;
                 // Kind of suboptimal...
                 let mut text_draw = UIText {
-                    pos: DrawablePos {
-                        y: self.pos.y + pm_sz.y + 20.0 + y_off,
-                        ..text_draw.pos
-                    },
+                    pos: DrawablePos { y: self.pos.y + pm_sz.y + 20.0 + y_off, ..text_draw.pos },
                     ..text_draw
                 };
 
                 text_draw.draw(ctx, canvas)?;
             }
-            GameMenuItemVariant::ImageItem {
-                image,
-                caption_mesh,
-                scale_factor,
-            } => {
+            GameMenuItemVariant::ImageItem { image, caption_mesh, scale_factor } => {
                 canvas.draw(
                     image,
                     // We have to scale the image to fit in the box

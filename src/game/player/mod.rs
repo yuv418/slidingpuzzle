@@ -1,8 +1,4 @@
-use std::{
-    collections::{BTreeMap},
-    sync::Mutex,
-    time::Duration,
-};
+use std::{collections::BTreeMap, sync::Mutex, time::Duration};
 
 use chrono::{DateTime, Local};
 use ggez::{Context, GameResult};

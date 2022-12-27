@@ -11,18 +11,9 @@ use crate::game::{
 use super::menu_item::GameMenuItem;
 
 pub enum NewGameMenuItemDataVariant {
-    TextItem {
-        text: String,
-    },
-    InputItem {
-        is_num: bool,
-        prompt: String,
-        initial_value: String,
-    },
-    ImageItem {
-        image: Image,
-        caption: String,
-    },
+    TextItem { text: String },
+    InputItem { is_num: bool, prompt: String, initial_value: String },
+    ImageItem { image: Image, caption: String },
 }
 pub struct NewGameMenuItemData {
     pub variant: NewGameMenuItemDataVariant,
@@ -57,21 +48,19 @@ impl GameMenuItemList {
                     NewGameMenuItemDataVariant::TextItem { text } => {
                         GameMenuItem::new_text_item(ctx, &text, e.next_page, x, y, w, h)
                     }
-                    NewGameMenuItemDataVariant::InputItem {
-                        is_num,
-                        prompt,
-                        initial_value,
-                    } => GameMenuItem::new_input_item(
-                        ctx,
-                        &prompt,
-                        initial_value.to_string(),
-                        is_num,
-                        e.next_page,
-                        x,
-                        y,
-                        w,
-                        h,
-                    ),
+                    NewGameMenuItemDataVariant::InputItem { is_num, prompt, initial_value } => {
+                        GameMenuItem::new_input_item(
+                            ctx,
+                            &prompt,
+                            initial_value.to_string(),
+                            is_num,
+                            e.next_page,
+                            x,
+                            y,
+                            w,
+                            h,
+                        )
+                    }
                     NewGameMenuItemDataVariant::ImageItem { image, caption } => {
                         GameMenuItem::new_image_item(ctx, image, &caption, e.next_page, x, y, w, h)
                     }
@@ -82,13 +71,7 @@ impl GameMenuItemList {
         let selected_item = 0;
         items[selected_item].select();
 
-        Ok(Self {
-            items,
-            selected_item,
-            w,
-            h,
-            has_next_scene: false,
-        })
+        Ok(Self { items, selected_item, w, h, has_next_scene: false })
     }
 
     pub fn height(&self) -> f32 {

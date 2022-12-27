@@ -67,9 +67,7 @@ impl GameMenuData for MainMenu {
     fn menu_mappings() -> Vec<NewGameMenuItemData> {
         vec![
             NewGameMenuItemData {
-                variant: NewGameMenuItemDataVariant::TextItem {
-                    text: "Continue".to_string(),
-                },
+                variant: NewGameMenuItemDataVariant::TextItem { text: "Continue".to_string() },
                 next_page: Some(Box::new(continue_game)),
             },
             NewGameMenuItemData {
@@ -85,9 +83,7 @@ impl GameMenuData for MainMenu {
                 next_page: Some(Box::new(choose_puzzle)),
             },
             NewGameMenuItemData {
-                variant: NewGameMenuItemDataVariant::TextItem {
-                    text: "Settings".to_string(),
-                },
+                variant: NewGameMenuItemDataVariant::TextItem { text: "Settings".to_string() },
                 next_page: Some(Box::new(settings_scene)),
             },
         ]
