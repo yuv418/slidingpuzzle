@@ -9,7 +9,7 @@ use crate::game::{
     drawable::Drawable,
     gmenu::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem},
     player::PLAYER,
-    puzzle::{puzzle_view::PuzzleView, tiles::TileState},
+    puzzle::{puzzle_view::PuzzleView},
     scene::Scene,
     ui::uitext::UIText,
 };
@@ -167,7 +167,7 @@ impl Scene for PuzzleListing {
         } else if self.start_game {
             let opt_player = PLAYER.lock().unwrap();
             // Player guaranteed to be some at this point
-            let player = opt_player.as_ref().unwrap();
+            let _player = opt_player.as_ref().unwrap();
 
             let game_image_num =
                 self.listing_start + (self.currently_selected.0 * 2) + self.currently_selected.1;
@@ -175,24 +175,9 @@ impl Scene for PuzzleListing {
             println!("starting tile state {}", game_image_num);
             return Some(
                 // TODO move this the puzzle view
-                if cfg!(feature = "multiplayer") {
-                    Box::new(
-                        PuzzleView::new(ctx, game_image_num).expect("Failed to create tile state"),
-                    )
-                } else {
-                    Box::new(
-                        TileState::new(
-                            ctx,
-                            game_image_num,
-                            player.player_settings.num_rows_cols,
-                            0.0,
-                            0.0,
-                            None,
-                            false,
-                        )
-                        .expect("Failed to create tile state"),
-                    )
-                },
+                Box::new(
+                    PuzzleView::new(ctx, game_image_num).expect("Failed to create tile state"),
+                ),
             );
         }
 

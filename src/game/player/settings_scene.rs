@@ -4,7 +4,10 @@ use ggez::{graphics::Color, input::keyboard::KeyCode, Context, GameResult};
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
-    animation::{animation::Animation, DrawablePos},
+    animation::{
+        animation::{Animation, AnimationData},
+        DrawablePos,
+    },
     drawable::Drawable,
     gmenu::{
         game_menu::GameMenu,
@@ -138,10 +141,10 @@ impl SettingsScene {
             intro,
             intro_animation: if intro {
                 Some(Animation::new(vec![
-                    (enter_confirm.clone(), anim_frames(enter_confirm_y)),
-                    (options.clone(), anim_frames(o_y)),
-                    (welcome.clone(), anim_frames(welcome_y)),
-                    (greeting.clone(), anim_frames(greeting_y)),
+                    AnimationData::Sequence((greeting.clone(), anim_frames(greeting_y))),
+                    AnimationData::Sequence((welcome.clone(), anim_frames(welcome_y))),
+                    AnimationData::Sequence((options.clone(), anim_frames(o_y))),
+                    AnimationData::Sequence((enter_confirm.clone(), anim_frames(enter_confirm_y))),
                 ]))
             } else {
                 None

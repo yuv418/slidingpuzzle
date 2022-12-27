@@ -18,7 +18,7 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
     let player = opt_player.as_ref().unwrap();
 
     let tile_state = Box::new(
-        TileState::new(
+        TileState::new_singleplayer(
             context,
             if !player.completed_puzzles.is_empty() {
                 // We'll have to add some kind of check to make sure
@@ -37,8 +37,6 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
             player.player_settings.num_rows_cols,
             0.0,
             0.0,
-            None,
-            false,
         )
         .expect("Failed to create TileState"),
     );

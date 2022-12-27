@@ -46,14 +46,12 @@ fn create_singleplayer_game(context: &mut Context, puzzle_num: usize) -> Box<dyn
     let opt_player = PLAYER.lock().unwrap();
     let player = opt_player.as_ref().unwrap();
     Box::new(
-        TileState::new(
+        TileState::new_singleplayer(
             context,
             puzzle_num,
             player.player_settings.num_rows_cols,
             0.0,
             0.0,
-            None,
-            false,
         )
         .expect("Failed to create singleplayer game"),
     )

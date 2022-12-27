@@ -15,7 +15,7 @@ pub fn main() -> GameResult {
         .window_setup(ggez::conf::WindowSetup::default().title("Sliding Puzzle"))
         .window_mode(
             ggez::conf::WindowMode::default()
-                .min_dimensions(810.0, 830.0)
+                .min_dimensions(1820.0, 1030.0)
                 .resizable(true),
         );
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {

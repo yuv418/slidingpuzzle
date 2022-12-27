@@ -13,7 +13,10 @@ use crate::game::{
     animation::DrawablePos,
     drawable::Drawable,
     player::PLAYER,
-    puzzle::{puzzle_view::PuzzleView, tiles::TileState},
+    puzzle::{
+        puzzle_view::PuzzleView,
+        tiles::{tile_multiplayer::TileMultiplayerTransport, TileState},
+    },
     scene::Scene,
     ui::uitext::UIText,
 };
@@ -60,7 +63,7 @@ impl MultiplayerGameView {
                 num_rows_cols,
                 0.0,
                 0.0,
-                Some(transport.clone()),
+                TileMultiplayerTransport::new(Some(transport.clone())),
                 false,
             )?,
             peer_tile_state: TileState::new(
@@ -69,7 +72,7 @@ impl MultiplayerGameView {
                 num_rows_cols,
                 850.0,
                 0.0,
-                Some(transport),
+                TileMultiplayerTransport::new(Some(transport)),
                 true,
             )?,
             separator_line: Mesh::new_line(
@@ -120,13 +123,6 @@ impl MultiplayerGameView {
 impl Scene for MultiplayerGameView {
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
         if self.game_cancelled {
-            ctx.gfx
-                .set_mode(
-                    ggez::conf::WindowMode::default()
-                        .dimensions(ctx.gfx.size().0 / 2.0, ctx.gfx.size().1)
-                        .resizable(true),
-                )
-                .expect("Failed to resize window for tile game");
             Some(Box::new(
                 PuzzleView::new(ctx, self.img_num).expect("Failed to create puzzle view"),
             ))
@@ -200,8 +196,8 @@ impl Drawable for MultiplayerGameView {
 
         if let Some(winner) = &self.winner {
             if match winner {
-                Winner::User => self.user_tile_state.current_animation.is_none(),
-                Winner::Peer => self.peer_tile_state.current_animation.is_none(),
+                Winner::User => self.user_tile_state.finished(),
+                Winner::Peer => self.peer_tile_state.finished(),
             } {
                 if !self.winner_anim.finished() {
                     self.winner_anim.advance_by(0.05);

@@ -14,5 +14,6 @@ pub enum MultiplayerGameMessage {
     DeleteRandomTile((usize, usize)),
     StartGame { img_num: usize, num_rows_cols: usize, host_username: String },
     SwapTiles { i1j1: (usize, usize), i2j2: (usize, usize), duration: f32 },
+    ScramblingFinished,
     GameCompleted(PuzzleStatistics),
 }

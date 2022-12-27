@@ -1,74 +1,107 @@
+// TODO move animation code to tile_animation.rs
+
 use chrono::Local;
 use image::{imageops::FilterType, io::Reader as ImageReader, GenericImageView, Pixel};
-use log::trace;
+
 use rand::Rng;
-use std::{cell::RefCell, io::BufReader, rc::Rc, sync::Arc};
+use std::{cell::RefCell, io::BufReader, rc::Rc};
 
 use ggez::{
     graphics::{Canvas, Image, ImageFormat},
     input::keyboard::KeyInput,
     timer::TimeContext,
     winit::event::VirtualKeyCode,
-    Context, GameError, GameResult,
+    Context, GameResult,
 };
 
 use crate::game::{
+    animation::{
+        animatable::Animatable,
+        animation::{Animation, AnimationData},
+    },
     drawable::Drawable,
-    multiplayer::{transport::MultiplayerTransport, MultiplayerGameMessage},
     player::{PuzzleStatistics, PLAYER},
     puzzle::puzzle_listing::PuzzleListing,
     scene::Scene,
 };
 
-use super::{Tile, TilePosition};
+#[cfg(feature = "multiplayer")]
+use crate::game::multiplayer::MultiplayerGameMessage;
+
+use super::{
+    tile_multiplayer::TileMultiplayerTransport, tile_random::TileRandom, Tile, TilePosition,
+};
+
+enum GameStage {
+    StartingAnimation,
+    Started,
+    FinishingAnimation,
+    Finished,
+    Cancelled,
+}
+
+impl Default for GameStage {
+    fn default() -> Self {
+        Self::StartingAnimation
+    }
+}
+
+// TODO: Add tile scale animation when the game is finished.
 
 const TOTAL_SCRAMBLE_SWAPS: u32 = 50;
-const TILE_SLIDE_DURATION: f32 = 0.2;
+const TILE_SLIDE_DURATION: f32 = 0.3;
 
+#[derive(Default)]
 pub struct TileState {
     pub tiles: Vec<Vec<Rc<RefCell<Tile>>>>,
     pub ref_board: Vec<Vec<Option<Rc<RefCell<Tile>>>>>,
     // For efficiency purposes
     pub blank_cell: (usize, usize),
     pub tile_blank_cell: (usize, usize),
-    // For the initial outwards animation and shuffling
-    outwards_animated_tiles: usize,
-    total_tiles_swapped: u32,
-    game_started: bool,
 
-    // For when the game is finished
-    inwards_animated_tiles: usize,
-    game_completed: bool,
-
-    pub current_animation: Option<(usize, usize)>,
-    // Previous from redoing the previous swap
     previous_swap: Option<(usize, usize)>,
 
-    swapping_tiles: bool,
-
+    animation: Animation<TilePosition>,
     img_num: usize,
     total_moves: u32,
     timer: Option<TimeContext>,
 
-    game_cancelled: bool,
+    game_stage: GameStage,
 
     // Multiplayer stuff
-    transport: Option<Arc<MultiplayerTransport>>,
+    transport: TileMultiplayerTransport,
     peer: bool,
-    pub puzzle_statistics: Option<PuzzleStatistics>,
 
+    pub puzzle_statistics: Option<PuzzleStatistics>,
     pub x: f32,
     pub y: f32,
 }
 
 impl TileState {
+    pub fn new_singleplayer(
+        context: &mut Context,
+        img_num: usize,
+        num_rows_cols: usize,
+        x: f32,
+        y: f32,
+    ) -> GameResult<Self> {
+        Self::new(
+            context,
+            img_num,
+            num_rows_cols,
+            x,
+            y,
+            TileMultiplayerTransport::new(None),
+            false,
+        )
+    }
     pub fn new(
         context: &mut Context,
         img_num: usize,
         num_rows_cols: usize,
         x: f32,
         y: f32,
-        transport: Option<Arc<MultiplayerTransport>>,
+        transport: TileMultiplayerTransport,
         peer: bool,
     ) -> GameResult<Self> {
         // Peer determines whether or not a game is multiplayer
@@ -88,31 +121,19 @@ impl TileState {
 
         let tile_size: u32 = img.width() / num_rows_cols as u32;
 
+        // Use Default for this
         let mut tile_state = Self {
-            tiles: vec![],
             ref_board: vec![vec![None; col_cnt_tiles as usize]; row_cnt_tiles as usize],
-            blank_cell: (0, 0),
-            tile_blank_cell: (0, 0),
-            game_started: false,
-            outwards_animated_tiles: 0,
-            total_tiles_swapped: 0,
-            inwards_animated_tiles: 0,
-            swapping_tiles: false,
-            game_completed: false,
-            current_animation: None,
-            previous_swap: None,
-            img_num,
-            total_moves: 0,
-            timer: None,
-            game_cancelled: false,
             transport,
             peer,
-            puzzle_statistics: None,
+            img_num,
             x,
             y,
+            ..Default::default()
         };
 
         // Go through each row of tiles, looping through each tile in the row
+        tile_state.animation.push_seq(AnimationData::Simultaneous);
         for i in 1..(row_cnt_tiles + 1) {
             let mut tile_row = vec![];
             for j in 1..(col_cnt_tiles + 1) {
@@ -133,7 +154,7 @@ impl TileState {
                     }
                     // println!("one-row length is {:?}", row_buf_pix.len());
                 }
-                println!("writing tile to tile_row");
+
                 let tile_to_insert = Tile {
                     side_len: tile_size,
                     image_buf: Image::from_pixels(
@@ -150,13 +171,27 @@ impl TileState {
                         tile_state.x,
                         tile_state.y,
                     ),
-                    animation: None,
                 };
-                tile_row.push(Rc::new(RefCell::new(tile_to_insert)));
+                let tile_to_insert = Rc::new(RefCell::new(tile_to_insert));
+
+                tile_state.animation.push_seq(AnimationData::Generator((
+                    tile_to_insert.clone(),
+                    TilePosition::from_ij(
+                        i as usize - 1,
+                        j as usize - 1,
+                        tile_size,
+                        tile_state.x,
+                        tile_state.y,
+                    ),
+                    TILE_SLIDE_DURATION * 4.0,
+                )));
+                tile_row.push(tile_to_insert);
             }
 
             tile_state.tiles.push(tile_row);
         }
+
+        // Copy generated tile board to ref board
         for i in 0..row_cnt_tiles {
             for j in 0..col_cnt_tiles {
                 let i = i as usize;
@@ -165,52 +200,68 @@ impl TileState {
             }
         }
 
-        let mut rng = rand::thread_rng();
         // Remove one random tile from ref board.
         if !tile_state.peer {
-            let i = rng.gen_range(0..row_cnt_tiles) as usize;
-            let j = rng.gen_range(0..col_cnt_tiles) as usize;
-            println!("deleting {:?} from ref board", (i, j));
-            tile_state.ref_board[i][j] = None;
-            tile_state.tile_blank_cell = (i, j);
-            tile_state.blank_cell = (i, j);
-
-            if let Some(t) = &tile_state.transport {
-                t.event_push_buffer
-                    .send(MultiplayerGameMessage::DeleteRandomTile(
-                        tile_state.blank_cell,
-                    ))
-                    .map_err(|_| {
-                        GameError::CustomError(
-                            "Failed to send delete random tile to peer".to_string(),
-                        )
-                    })?;
+            tile_state.delete_random_tile(None)?;
+            for _ in 0..TOTAL_SCRAMBLE_SWAPS {
+                tile_state.swap_random_tile_blank();
             }
         }
 
-        let tile_gap = tile_state.tiles[0][0].borrow().side_len + 10; // determine the gap here
-        let win_width = (180 + (tile_state.tiles[0].len() as u32 * tile_gap)) as f32;
-        let win_height = (300 + (tile_gap * tile_state.tiles.len() as u32)) as f32;
-        println!("the new window dimensions are {}x{}", win_width, win_height);
-        // This should happen in TileState::new, not here.
-        context
-            .gfx
-            .set_mode(
-                ggez::conf::WindowMode::default()
-                    .dimensions(
-                        if let None = tile_state.transport {
-                            win_width
-                        } else {
-                            (win_width * 2.0) + 100.0
-                        },
-                        win_height,
-                    )
-                    .resizable(true),
-            )
-            .expect("Failed to resize window for tile game");
         tile_state.timer = Some(TimeContext::new());
 
         Ok(tile_state)
+    }
+
+    pub fn delete_random_tile(&mut self, peer_tile: Option<(usize, usize)>) -> GameResult {
+        let (i, j) = if let Some(peer_tile) = peer_tile {
+            peer_tile
+        } else {
+            let mut rng = rand::thread_rng();
+            (
+                rng.gen_range(0..self.tiles.len()) as usize,
+                rng.gen_range(0..self.tiles.len()) as usize,
+            )
+        };
+        println!("deleting {:?} from ref board", (i, j));
+
+        self.animation.push_seq(AnimationData::Unsimultaneous);
+        self.animation.push_seq(AnimationData::Generator((
+            self.ref_board[i][j].as_ref().unwrap().clone(),
+            {
+                let mut x = TilePosition::from_ij_no_gap(
+                    i,
+                    j,
+                    self.ref_board[i][j]
+                        .as_ref()
+                        .unwrap()
+                        .as_ref()
+                        .borrow()
+                        .side_len,
+                    self.x,
+                    self.y,
+                );
+                x.scale = 0.0;
+                x
+            },
+            TILE_SLIDE_DURATION * 4.0,
+        )));
+        self.ref_board[i][j] = None;
+        self.tile_blank_cell = (i, j);
+        self.blank_cell = (i, j);
+
+        if !self.peer {
+            self.transport.delete_random_tile(self.blank_cell)?;
+        }
+        Ok(())
+    }
+
+    pub fn finished(&self) -> bool {
+        if let GameStage::Finished = self.game_stage {
+            true
+        } else {
+            false
+        }
     }
 
     pub fn swap_ref_tiles(
@@ -221,17 +272,7 @@ impl TileState {
     ) {
         if !self.peer {
             // Send to peer
-            if let Some(transport) = &self.transport {
-                // TODO handle this expect better
-                transport
-                    .event_push_buffer
-                    .send(MultiplayerGameMessage::SwapTiles {
-                        i1j1: (i1, j1),
-                        i2j2: (i2, j2),
-                        duration,
-                    })
-                    .expect("Failed to push tile swap into transport");
-            }
+            self.transport.swap_tiles((i1, j1), (i2, j2), duration);
         }
 
         {
@@ -245,14 +286,16 @@ impl TileState {
         }
         // Update coordinates and keyframes
 
-        let mut tile_update = (*self.ref_board[i1][j1].as_ref().unwrap())
+        let tile_update = (*self.ref_board[i1][j1].as_ref().unwrap())
             .as_ref()
             .borrow_mut();
 
         let new_pos = TilePosition::from_ij(i1, j1, tile_update.side_len, self.x, self.y);
-        tile_update.to_pos(new_pos, duration);
-
-        self.current_animation = Some((i1, j1));
+        self.animation.push_seq(AnimationData::Generator((
+            self.ref_board[i1][j1].as_ref().unwrap().clone(),
+            new_pos,
+            TILE_SLIDE_DURATION,
+        )));
     }
 
     pub fn check_completed(&mut self) {
@@ -260,82 +303,44 @@ impl TileState {
             for j in 0..self.ref_board[i].len() {
                 if let Some(tile) = &self.ref_board[i][j] {
                     if !Rc::ptr_eq(&self.tiles[i][j], tile) {
-                        self.game_completed = false;
                         return;
                     }
                 }
             }
         }
 
-        self.game_completed = true
+        self.set_finishing_animation();
     }
 
-    pub fn game_completed(&self) -> bool {
-        self.game_completed
+    pub fn set_finishing_animation(&mut self) {
+        // The game is completed, begin animations.
+        self.animation.push_seq(AnimationData::Simultaneous);
+        for i in 0..self.tiles.len() {
+            for j in 0..self.tiles[i].len() {
+                let tile = self.tiles[i][j].as_ref().borrow();
+                let side_len = tile.side_len;
+                self.animation.push_seq(AnimationData::Sequence((
+                    self.tiles[i][j].clone(),
+                    tile.to_state(
+                        TilePosition::from_ij_no_gap(
+                            i as usize, j as usize, side_len, self.x, self.y,
+                        ),
+                        TILE_SLIDE_DURATION * 4.0,
+                    ),
+                )));
+            }
+        }
+        self.game_stage = GameStage::FinishingAnimation;
     }
 
     pub fn swap_random_tile_blank(&mut self) {
         // This is so low effort
         // Better method: start with gap at 0,0 and swap the gap with random adjacents over and over
-        let mut rng = rand::thread_rng();
         let col_cnt_tiles = self.tiles.len();
         let row_cnt_tiles = self.tiles[0].len();
+
         // Choose a random adjacent tile
-        let replacetile = if self.blank_cell == (0, 0) {
-            rng.gen_range(0..2) as usize
-        } else if self.blank_cell == (0, col_cnt_tiles as usize - 1) {
-            let r = rng.gen_range(0..2);
-            (if r == 1 { 2 } else { r } as usize)
-        } else if self.blank_cell == (row_cnt_tiles as usize - 1, col_cnt_tiles as usize - 1) {
-            let r = rng.gen_range(0..2);
-            (if r == 0 { 3 } else { 2 } as usize)
-        } else if self.blank_cell == (row_cnt_tiles as usize - 1, 0) {
-            let r = rng.gen_range(0..2);
-            (if r == 0 { 3 } else { r } as usize)
-        }
-        // Left edge
-        else if self.blank_cell.1 == 0 {
-            let r = rng.gen_range(0..3);
-            (if r == 2 { 3 } else { r } as usize)
-        }
-        // Top edge
-        else if self.blank_cell.0 == 0 {
-            rng.gen_range(0..3)
-        }
-        // Right edge
-        else if self.blank_cell.1 == col_cnt_tiles as usize - 1 {
-            let r = rng.gen_range(0..3);
-            (if r == 1 { 3 } else { r } as usize)
-        }
-        // Bottom edge
-        else if self.blank_cell.0 == row_cnt_tiles as usize - 1 {
-            rng.gen_range(0..3) + 1
-        } else {
-            rng.gen_range(0..4) as usize
-        };
-
-        let (c1, c2) = self.blank_cell;
-
-        // println!("swap {:?} {:?}", self.blank_cell, replacetile);
-        let tile2 = match replacetile {
-            0 => {
-                // Down
-                (c1 + 1, c2)
-            }
-            1 => {
-                // Right
-                (c1, c2 + 1)
-            }
-            2 => {
-                // Left
-                (c1, c2 - 1)
-            }
-            3 => {
-                // Up
-                (c1 - 1, c2)
-            }
-            _ => panic!("Should never happen"),
-        };
+        let tile2 = TileRandom::random_adjacent_tile(self.blank_cell, col_cnt_tiles, row_cnt_tiles);
 
         // Redo the method if the tile2 was the previous swap
         if Some(tile2) == self.previous_swap {
@@ -343,7 +348,7 @@ impl TileState {
             return;
         } else {
             self.previous_swap = Some(self.blank_cell);
-            self.swap_ref_tiles(self.blank_cell, tile2, 0.15)
+            self.swap_ref_tiles(self.blank_cell, tile2, TILE_SLIDE_DURATION)
         }
     }
 
@@ -354,47 +359,32 @@ impl TileState {
             move_count: self.total_moves,
         }
     }
-    fn fix_missing_tile(&mut self) {
-        // Fix the missing tile
-        let tile = &self.tiles[self.blank_cell.0][self.blank_cell.1];
-        let side_len = { tile.as_ref().borrow().side_len };
-        let (m_x, m_y) = self.tile_blank_cell;
-        self.tiles[m_x][m_y].as_ref().borrow_mut().pos =
-            TilePosition::from_ij(m_x, m_y, side_len, self.x, self.y);
-        self.game_started = true;
-    }
 }
 impl Scene for TileState {
+    #[cfg(feature = "multiplayer")]
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        use log::trace;
+
         if self.peer {
-            if let Some(transport) = &self.transport {
-                if self.current_animation.is_none() {
-                    match transport.event_buffer.try_recv() {
-                        Ok(msg) => {
-                            trace!("recv tile msg {:?}", msg);
-                            match msg {
-                                MultiplayerGameMessage::SwapTiles { i1j1, i2j2, duration } => {
-                                    self.swap_ref_tiles(i1j1, i2j2, duration);
-                                    if !self.game_started {
-                                        self.total_tiles_swapped += 1;
-                                    }
-                                    if self.total_tiles_swapped == TOTAL_SCRAMBLE_SWAPS {
-                                        self.fix_missing_tile();
-                                        self.game_started = true;
-                                    }
-                                }
-                                MultiplayerGameMessage::DeleteRandomTile((i, j)) => {
-                                    self.ref_board[i][j] = None;
-                                    self.tile_blank_cell = (i, j);
-                                    self.blank_cell = (i, j);
-                                }
-                                MultiplayerGameMessage::GameCompleted(stats) => {
-                                    self.puzzle_statistics = Some(stats);
-                                    println!("Peer completed game");
-                                    self.game_completed = true
-                                }
-                                _ => {}
-                            }
+            if self.animation.finished() {
+                if let Some(msg) = self.transport.recv_message() {
+                    trace!("recv tile msg {:?}", msg);
+                    match msg {
+                        MultiplayerGameMessage::SwapTiles { i1j1, i2j2, duration } => {
+                            self.swap_ref_tiles(i1j1, i2j2, duration);
+                        }
+                        MultiplayerGameMessage::DeleteRandomTile((i, j)) => {
+                            // TODO move this to separate function to deal with animations
+                            self.delete_random_tile(Some((i, j)))?;
+                        }
+                        MultiplayerGameMessage::GameCompleted(stats) => {
+                            // TODO move this to separate function to deal with animations
+                            self.puzzle_statistics = Some(stats);
+                            println!("Peer completed game");
+                            self.set_finishing_animation();
+                        }
+                        MultiplayerGameMessage::ScramblingFinished => {
+                            self.game_stage = GameStage::Started;
                         }
                         _ => {}
                     }
@@ -403,116 +393,87 @@ impl Scene for TileState {
         }
         Ok(())
     }
+
     fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, repeat: bool) {
-        let i = self.blank_cell.0;
-        let j = self.blank_cell.1;
+        let (i, j) = self.blank_cell;
+        let mut swap_tile = (i, j);
+
         // TODO how do we make escape callable during animation?
-        if !repeat && !self.game_completed() && self.game_started {
-            // TODO make this DRYer
-            if let Some(vkeycode) = key_input.keycode {
-                match vkeycode {
-                    VirtualKeyCode::Up => {
+        if !repeat {
+            if let GameStage::Started = self.game_stage {
+                if let Some(vkeycode) = key_input.keycode {
+                    match vkeycode {
                         // Tile below space
-                        if i + 1 < self.ref_board.len() {
-                            self.swap_ref_tiles((i, j), (i + 1, j), TILE_SLIDE_DURATION);
-                            self.total_moves += 1;
+                        VirtualKeyCode::Up if i + 1 < self.ref_board.len() => {
+                            swap_tile = (i + 1, j)
                         }
-                    }
-                    VirtualKeyCode::Down => {
                         // Tile above space
-                        if i != 0 {
-                            self.swap_ref_tiles((i, j), (i - 1, j), TILE_SLIDE_DURATION);
-                            self.total_moves += 1;
-                        }
-                    }
-                    VirtualKeyCode::Left => {
+                        VirtualKeyCode::Down if i != 0 => swap_tile = (i - 1, j),
                         // Tile left of space
-                        if j + 1 < self.ref_board[i].len() {
-                            self.swap_ref_tiles((i, j), (i, j + 1), TILE_SLIDE_DURATION);
-                            self.total_moves += 1;
+                        VirtualKeyCode::Left if j + 1 < self.ref_board[i].len() => {
+                            swap_tile = (i, j + 1)
                         }
-                    }
-                    VirtualKeyCode::Right => {
                         // Tile right of space
-                        if j != 0 {
-                            self.swap_ref_tiles((i, j), (i, j - 1), TILE_SLIDE_DURATION);
-                            self.total_moves += 1;
-                        }
+                        VirtualKeyCode::Right if j != 0 => swap_tile = (i, j - 1),
+                        // Cancel game
+                        VirtualKeyCode::Escape => self.game_stage = GameStage::Cancelled,
+                        _ => {}
                     }
-                    VirtualKeyCode::Escape => {
-                        self.game_cancelled = true;
+                    if swap_tile != self.blank_cell {
+                        self.swap_ref_tiles(self.blank_cell, swap_tile, TILE_SLIDE_DURATION);
+                        self.total_moves += 1;
                     }
-                    _ => {}
                 }
-            }
-            // TODO move this to the update method
-            self.check_completed();
-            if !self.peer && self.game_completed() {
-                let stats = self.get_puzzle_statistics();
-                self.puzzle_statistics = Some(stats.clone());
-                if let Err(e) = self
-                    .transport
-                    .as_ref()
-                    .unwrap()
-                    .event_push_buffer
-                    .send(MultiplayerGameMessage::GameCompleted(stats))
-                {
-                    println!("Failed to send game completed {:?}", e);
+                // TODO move this to the update method
+                if !self.peer {
+                    // Immediately will happen during this
+                    self.check_completed();
+                    if let GameStage::FinishingAnimation = self.game_stage {
+                        let stats = self.get_puzzle_statistics();
+                        self.puzzle_statistics = Some(stats.clone());
+                        self.transport.end_game(stats);
+                    }
                 }
             }
         }
     }
 
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
-        if self.game_completed() && self.current_animation.is_none() {
-            // Update player completed puzzles,
-            // point value?
+        match self.game_stage {
+            GameStage::Finished | GameStage::Cancelled => {
+                if let GameStage::Finished = self.game_stage {
+                    // Update player completed puzzles,
+                    // point value?
+                    {
+                        let mut opt_player = PLAYER.lock().unwrap();
+                        let player = opt_player.as_mut().unwrap();
 
-            {
-                let mut opt_player = PLAYER.lock().unwrap();
-                let player = opt_player.as_mut().unwrap();
+                        let game_stat = self.get_puzzle_statistics();
 
-                let game_stat = self.get_puzzle_statistics();
-
-                // TODO do we really want this? Should multiplayer stats get saved separately?
-                if let Some(statistics) = player.completed_puzzles.get_mut(&self.img_num) {
-                    statistics.push(game_stat);
-                } else {
-                    player
-                        .completed_puzzles
-                        .insert(self.img_num, vec![game_stat]);
+                        // TODO do we really want this? Should multiplayer stats get saved separately?
+                        if let Some(statistics) = player.completed_puzzles.get_mut(&self.img_num) {
+                            statistics.push(game_stat);
+                        } else {
+                            player
+                                .completed_puzzles
+                                .insert(self.img_num, vec![game_stat]);
+                        }
+                        player.save(ctx).expect("Failed to save player statistics");
+                    }
                 }
-                player.save(ctx).expect("Failed to save player statistics");
-                if let Some(_transport) = &self.transport {
-                } else {
-                }
+                Some(Box::new(
+                    PuzzleListing::new(ctx, 4 * ((self.img_num) / 4))
+                        .expect("Failed to return to puzzle listing"),
+                ))
             }
-        }
-
-        if (self.game_completed() && self.current_animation.is_none()) || self.game_cancelled {
-            Some(Box::new(
-                PuzzleListing::new(ctx, 4 * ((self.img_num) / 4))
-                    .expect("Failed to return to puzzle listing"),
-            ))
-        } else {
-            None
+            _ => None,
         }
     }
 
     fn draw_transition(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
-        for i in 0..self.ref_board.len() {
-            for j in 0..self.ref_board[i].len() {
-                let tile = if !self.game_cancelled {
-                    &self.tiles[i][j]
-                } else {
-                    if let Some(tile) = &self.ref_board[i][j] {
-                        tile
-                    } else {
-                        continue;
-                    }
-                };
-                let mut draw_tile = tile.borrow_mut();
-                draw_tile.draw(ctx, canvas)?;
+        for tr in self.tiles.iter() {
+            for tile in tr {
+                tile.as_ref().borrow_mut().draw(ctx, canvas)?;
             }
         }
         Ok(())
@@ -522,89 +483,19 @@ impl Scene for TileState {
 impl Drawable for TileState {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
         // draw all tiles with a 10px gap between each title
-
-        if let Some(current_animation) = self.current_animation {
-            let (a_x, a_y) = current_animation;
-            if self.ref_board[a_x][a_y]
-                .as_ref()
-                .unwrap()
-                .as_ref()
-                .borrow()
-                .animation
-                .is_none()
-            {
-                self.current_animation = None;
+        self.animation.advance(0.05);
+        if self.animation.finished() {
+            match self.game_stage {
+                GameStage::StartingAnimation => self.game_stage = GameStage::Started,
+                GameStage::FinishingAnimation => self.game_stage = GameStage::Finished,
+                _ => {}
             }
         }
-
-        let total_tiles = self.ref_board.len() * self.ref_board[0].len();
 
         for i in 0..self.ref_board.len() {
             // each tile in the row, so x
             for j in 0..self.ref_board[i].len() {
-                let mut tile = if !self.game_started {
-                    if self.outwards_animated_tiles < total_tiles {
-                        let tile = &self.tiles[i][j];
-                        let mut tile_update = tile.as_ref().borrow_mut();
-                        let side_len = tile_update.side_len;
-                        tile_update
-                            .to_pos(TilePosition::from_ij(i, j, side_len, self.x, self.y), 3.0);
-                        self.outwards_animated_tiles += 1;
-                        &self.tiles[i][j]
-                    } else if self.outwards_animated_tiles == total_tiles && !self.swapping_tiles {
-                        self.swapping_tiles = true;
-                        // This seems rather inefficient
-                        for tile_row in &self.tiles {
-                            for tile in tile_row {
-                                if tile.borrow().animation.is_some() {
-                                    self.swapping_tiles = false;
-                                }
-                            }
-                        }
-                        &self.tiles[i][j]
-                    } else if self.swapping_tiles {
-                        // Slide a random tile
-                        if !self.peer {
-                            if self.total_tiles_swapped < TOTAL_SCRAMBLE_SWAPS
-                                && self.current_animation.is_none()
-                            {
-                                self.swap_random_tile_blank();
-                                self.total_tiles_swapped += 1;
-                            } else if self.total_tiles_swapped == TOTAL_SCRAMBLE_SWAPS {
-                                self.fix_missing_tile();
-                            }
-                        }
-                        if let Some(tile) = &self.ref_board[i][j] {
-                            tile
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        panic!("Never happens")
-                    }
-                } else if !self.game_completed() {
-                    if let Some(tile) = &self.ref_board[i][j] {
-                        tile
-                    } else {
-                        continue;
-                    }
-                } else {
-                    let tile = &self.tiles[i][j];
-
-                    if self.inwards_animated_tiles < total_tiles {
-                        let mut tile_update = tile.as_ref().borrow_mut();
-                        let side_len = tile_update.side_len;
-                        tile_update.to_pos(
-                            TilePosition::from_ij_no_gap(i, j, side_len, self.x, self.y),
-                            1.8,
-                        );
-                        self.inwards_animated_tiles += 1;
-                    }
-                    tile
-                }
-                .as_ref()
-                .borrow_mut();
-
+                let mut tile = self.tiles[i][j].as_ref().borrow_mut();
                 tile.draw(ctx, canvas)?;
             }
         }

@@ -1,12 +1,14 @@
 use ggez::{
-    glam::Vec2,
-    graphics::{Canvas, Image},
+    graphics::{Canvas, DrawParam, Image},
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 use keyframe_derive::CanTween;
 
-use crate::game::drawable::Drawable;
+use crate::game::{
+    animation::animatable::{Animatable, Tweenable},
+    drawable::Drawable,
+};
 
 const TILE_GAP: f32 = 20.0;
 
@@ -18,7 +20,6 @@ pub struct Tile {
     pub side_len: u32,
     pub image_buf: Image,
     pub pos: TilePosition,
-    pub animation: Option<AnimationSequence<TilePosition>>,
 }
 
 // We don't use DrawablePos because of the implementations that come after this.
@@ -26,13 +27,17 @@ pub struct Tile {
 pub struct TilePosition {
     pub x: f32,
     pub y: f32,
+    pub scale: f32,
 }
+
+impl Tweenable for TilePosition {}
 
 impl TilePosition {
     pub fn from_ij(i: usize, j: usize, tile_size: u32, off_x: f32, off_y: f32) -> Self {
         TilePosition {
             x: off_x + TILE_PADDING_X + (j as f32 * (tile_size as f32 + TILE_GAP)),
             y: off_y + TILE_PADDING_Y + (i as f32 * (tile_size as f32 + TILE_GAP)),
+            scale: 1.0,
         }
     }
 
@@ -41,34 +46,32 @@ impl TilePosition {
         TilePosition {
             x: off_x + TILE_GAP + TILE_PADDING_X + (j as f32 * (tile_size as f32)),
             y: off_y + TILE_GAP + TILE_PADDING_Y + (i as f32 * (tile_size as f32)),
+            scale: 1.0,
         }
     }
 }
 
-impl Tile {
-    pub fn to_pos(&mut self, new_pos: TilePosition, duration: f32) {
+impl Animatable<TilePosition> for Tile {
+    fn set_state(&mut self, now: TilePosition) {
+        self.pos = now;
+    }
+
+    fn to_state(&self, to: TilePosition, duration: f32) -> AnimationSequence<TilePosition> {
         // Keyframe all the tiles.
         if duration > 0.0 {
-            self.animation = Some(keyframes![
-                (self.pos.clone(), 0.0, EaseInOut),
-                (new_pos.clone(), duration, EaseInOut)
-            ]);
+            keyframes![(self.pos, 0.0, EaseInOut), (to, duration, EaseInOut)]
+        } else {
+            keyframes![]
         }
-        self.pos = new_pos;
     }
 }
+
 impl Drawable for Tile {
     fn draw(&mut self, _ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
-        if let Some(seq) = &mut self.animation {
-            seq.advance_by(0.05);
-            let anim_pos = seq.now();
-            canvas.draw(&self.image_buf, Vec2::new(anim_pos.x, anim_pos.y));
-            if seq.finished() {
-                self.animation = None;
-            }
-        } else {
-            canvas.draw(&self.image_buf, Vec2::new(self.pos.x, self.pos.y));
-        }
+        canvas.draw(
+            &self.image_buf,
+            DrawParam::from([self.pos.x, self.pos.y]).scale([self.pos.scale; 2]),
+        );
         Ok(())
     }
 }
