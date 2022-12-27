@@ -101,9 +101,9 @@ impl Drawable for PuzzleListing {
 impl Scene for PuzzleListing {
     fn handle_key_event(
         &mut self,
-        ctx: &mut ggez::Context,
+        _ctx: &mut ggez::Context,
         key_input: ggez::input::keyboard::KeyInput,
-        repeat: bool,
+        _repeat: bool,
     ) {
         let old_selected = self.currently_selected;
 
@@ -230,5 +230,5 @@ impl Scene for PuzzleListing {
         self.draw(ctx, canvas)
     }
 
-    fn text_input_event(&mut self, _ctx: &mut ggez::Context, c: char) {}
+    fn text_input_event(&mut self, _ctx: &mut ggez::Context, _c: char) {}
 }

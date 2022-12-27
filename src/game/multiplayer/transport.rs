@@ -1,12 +1,12 @@
-use std::{pin::Pin, sync::Arc};
+use std::{sync::Arc};
 
 use ggez::{GameError, GameResult};
 use log::trace;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned};
 use webrtc::{
     api::{interceptor_registry, media_engine::MediaEngine, APIBuilder},
     data_channel::{
-        data_channel_message::DataChannelMessage, data_channel_state::RTCDataChannelState,
+        data_channel_message::DataChannelMessage,
         RTCDataChannel,
     },
     ice_transport::ice_server::RTCIceServer,
@@ -138,7 +138,7 @@ impl MultiplayerTransport {
         let (tx_exit, rx_exit) = flume::bounded::<bool>(1);
         let txe_c = tx_exit.clone();
 
-        let channel = if conn_string.is_none() {
+        let _channel = if conn_string.is_none() {
             let channel = peer_conn
                 .create_data_channel("MultiplayerGameData", None)
                 .await
@@ -239,7 +239,7 @@ impl MultiplayerTransport {
 
         // Push this into the tx
         let base64_conn_str = if let Some(l_d) = peer_conn.local_description().await {
-            base64::encode(serde_json::to_string(&l_d).map_err(|e| {
+            base64::encode(serde_json::to_string(&l_d).map_err(|_e| {
                 GameError::CustomError("Failed to convert peer base64 to json".to_string())
             })?)
         } else {

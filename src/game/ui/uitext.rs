@@ -30,7 +30,7 @@ impl UIText {
 impl Drawable for UIText {
     fn draw(
         &mut self,
-        ctx: &mut ggez::Context,
+        _ctx: &mut ggez::Context,
         canvas: &mut ggez::graphics::Canvas,
     ) -> ggez::GameResult {
         canvas.draw(&self.text, Vec2::new(self.pos.x, self.pos.y));

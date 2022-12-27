@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BinaryHeap},
+    collections::{BTreeMap},
     sync::Mutex,
     time::Duration,
 };

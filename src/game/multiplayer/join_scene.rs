@@ -34,7 +34,7 @@ pub struct JoinMultiplayerScene {
 }
 
 impl JoinMultiplayerScene {
-    pub fn new(ctx: &mut Context, puzzle_num: usize, creator: bool) -> GameResult<Self> {
+    pub fn new(_ctx: &mut Context, puzzle_num: usize, creator: bool) -> GameResult<Self> {
         let header = UIText::new(
             if creator {
                 "Create Multiplayer Game"
@@ -160,11 +160,13 @@ impl Scene for JoinMultiplayerScene {
                             num_rows_cols: player.player_settings.num_rows_cols,
                             host_username: player.username(),
                         });
+                        // TODO handle this better
                         self.transport
                             .as_ref()
                             .unwrap()
                             .event_push_buffer
-                            .send(self.game_started.as_ref().unwrap().clone());
+                            .send(self.game_started.as_ref().unwrap().clone())
+                            .expect("Failed to send game start event to peer");
                     }
                     MultiplayerGameMessage::StartGame { .. } => {
                         self.game_started = Some(event.clone());
@@ -181,7 +183,7 @@ impl Scene for JoinMultiplayerScene {
         &mut self,
         _ctx: &mut Context,
         key_input: ggez::input::keyboard::KeyInput,
-        repeat: bool,
+        _repeat: bool,
     ) {
         if let Some(vkeycode) = key_input.keycode {
             match vkeycode {
@@ -200,7 +202,7 @@ impl Scene for JoinMultiplayerScene {
                         // Make this method return a result so this doesn't happen
                         .unwrap();
                     if self.creator {
-                        if let Err(e) = self
+                        if let Err(_e) = self
                             .transport
                             .as_ref()
                             .unwrap()

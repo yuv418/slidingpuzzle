@@ -1,6 +1,6 @@
 use chrono::Local;
 use image::{imageops::FilterType, io::Reader as ImageReader, GenericImageView, Pixel};
-use log::{info, trace};
+use log::trace;
 use rand::Rng;
 use std::{cell::RefCell, io::BufReader, rc::Rc, sync::Arc};
 
@@ -15,7 +15,7 @@ use ggez::{
 use crate::game::{
     drawable::Drawable,
     multiplayer::{transport::MultiplayerTransport, MultiplayerGameMessage},
-    player::{Player, PuzzleStatistics, PLAYER},
+    player::{PuzzleStatistics, PLAYER},
     puzzle::puzzle_listing::PuzzleListing,
     scene::Scene,
 };
@@ -222,13 +222,15 @@ impl TileState {
         if !self.peer {
             // Send to peer
             if let Some(transport) = &self.transport {
+                // TODO handle this expect better
                 transport
                     .event_push_buffer
                     .send(MultiplayerGameMessage::SwapTiles {
                         i1j1: (i1, j1),
                         i2j2: (i2, j2),
                         duration,
-                    });
+                    })
+                    .expect("Failed to push tile swap into transport");
             }
         }
 
@@ -363,7 +365,7 @@ impl TileState {
     }
 }
 impl Scene for TileState {
-    fn update(&mut self, ctx: &mut Context) -> GameResult {
+    fn update(&mut self, _ctx: &mut Context) -> GameResult {
         if self.peer {
             if let Some(transport) = &self.transport {
                 if self.current_animation.is_none() {
@@ -485,7 +487,7 @@ impl Scene for TileState {
                         .insert(self.img_num, vec![game_stat]);
                 }
                 player.save(ctx).expect("Failed to save player statistics");
-                if let Some(transport) = &self.transport {
+                if let Some(_transport) = &self.transport {
                 } else {
                 }
             }

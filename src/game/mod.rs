@@ -1,6 +1,6 @@
 use self::gmenu::game_menu::GameMenu;
 use self::gmenu::main_menu::MainMenu;
-use self::player::Player;
+
 use self::scene::Scene;
 use ggez::event;
 use ggez::glam::Vec2;

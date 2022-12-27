@@ -174,7 +174,9 @@ impl Drawable for SettingsScene {
         canvas: &mut ggez::graphics::Canvas,
     ) -> ggez::GameResult {
         if let Some(anim) = &mut self.intro_animation {
-            anim.advance(0.05);
+            if !anim.finished() {
+                anim.advance(0.05);
+            }
         }
 
         if self.intro {

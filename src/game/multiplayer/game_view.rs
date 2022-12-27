@@ -230,7 +230,7 @@ impl Drawable for MultiplayerGameView {
                             Winner::User => 0.0,
                             Winner::Peer => 835.0,
                         };
-                    self.winner_text.draw(ctx, canvas);
+                    self.winner_text.draw(ctx, canvas)?;
                 }
             }
         }
