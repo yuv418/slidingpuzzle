@@ -21,6 +21,7 @@ pub struct Tile {
     pub animation: Option<AnimationSequence<TilePosition>>,
 }
 
+// We don't use DrawablePos because of the implementations that come after this.
 #[derive(CanTween, Debug, Clone, Copy, Default)]
 pub struct TilePosition {
     pub x: f32,

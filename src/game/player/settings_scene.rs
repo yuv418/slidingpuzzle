@@ -1,11 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ggez::{
-    glam::Vec2,
-    graphics::{Color, PxScale, Text, TextFragment},
-    input::keyboard::KeyCode,
-    Context, GameResult,
-};
+use ggez::{glam::Vec2, graphics::Color, input::keyboard::KeyCode, Context, GameResult};
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
@@ -100,7 +95,7 @@ impl SettingsScene {
                         prompt: "Username".to_string(),
                         is_num: false,
                         initial_value: if let Some(player) = opt_player.as_ref() {
-                            format!("{}", player.player_settings.num_rows_cols)
+                            player.username.clone()
                         } else {
                             "".to_string()
                         },

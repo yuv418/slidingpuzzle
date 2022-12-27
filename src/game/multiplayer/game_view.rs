@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ggez::{
     glam::Vec2,
-    graphics::{Color, DrawMode, DrawParam, Mesh, PxScale, Rect, Text, TextFragment},
+    graphics::{Color, DrawMode, Mesh, Rect},
     input::keyboard::KeyInput,
     winit::event::VirtualKeyCode,
     Context, GameResult,
@@ -10,8 +10,8 @@ use ggez::{
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
-    drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER, scene::Scene,
-    tiles::TileState,
+    animation::DrawablePos, drawable::Drawable, gmenu::puzzle_view::PuzzleView, player::PLAYER,
+    scene::Scene, tiles::TileState, ui::uitext::UIText,
 };
 
 use super::transport::MultiplayerTransport;
@@ -28,10 +28,10 @@ pub struct MultiplayerGameView {
     separator_line: Mesh,
 
     // Username display
-    local_user_text: Text,
-    peer_user_text: Text,
+    local_user_text: UIText,
+    peer_user_text: UIText,
 
-    winner_text: Text,
+    winner_text: UIText,
     winner_anim: AnimationSequence<f32>,
     winner: Option<Winner>,
 
@@ -78,32 +78,39 @@ impl MultiplayerGameView {
                 Color::RED,
             )?,
             winner: None,
-            winner_text: Text::new(TextFragment {
-                text: "Winner!".to_string(),
-                color: Some(Color::BLACK),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(88.0)),
-            }),
+            winner_text: UIText::new(
+                "Winner!".to_string(),
+                Color::BLACK,
+                88.0,
+                DrawablePos {
+                    // We don't know x right now.
+                    x: 0.0,
+                    y: 90.0,
+                },
+            ),
             winner_anim: keyframes![
                 (0.0, 0.0, EaseInOut),
                 (context.gfx.drawable_size().1, 2.0, EaseInOut)
             ],
-            local_user_text: Text::new(TextFragment {
-                text: {
+            local_user_text: UIText::new(
+                {
                     let opt_player = PLAYER.lock().unwrap();
                     let player = opt_player.as_ref().unwrap();
                     player.username()
                 },
-                color: Some(Color::BLACK),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(38.0)),
-            }),
-            peer_user_text: Text::new(TextFragment {
-                text: peer_username,
-                color: Some(Color::BLACK),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(38.0)),
-            }),
+                Color::BLACK,
+                38.0,
+                DrawablePos { x: 90.0, y: 90.0 },
+            ),
+            peer_user_text: UIText::new(
+                peer_username,
+                Color::BLACK,
+                38.0,
+                DrawablePos {
+                    x: 90.0 + 835.0,
+                    y: 90.0,
+                },
+            ),
             game_cancelled: false,
         })
     }
@@ -187,8 +194,8 @@ impl Drawable for MultiplayerGameView {
         self.peer_tile_state.draw(ctx, canvas)?;
 
         // Draw usernames
-        canvas.draw(&self.local_user_text, Vec2::new(90.0, 90.0));
-        canvas.draw(&self.peer_user_text, Vec2::new(90.0 + 835.0, 90.0));
+        self.local_user_text.draw(ctx, canvas)?;
+        self.peer_user_text.draw(ctx, canvas)?;
 
         if let Some(winner) = &self.winner {
             if match winner {
@@ -214,16 +221,12 @@ impl Drawable for MultiplayerGameView {
                 )?;
                 canvas.draw(&cover_rect, Vec2::new(0.0, 0.0));
                 if self.winner_anim.finished() {
-                    canvas.draw(
-                        &self.winner_text,
-                        Vec2::new(
-                            90.0 + match winner {
-                                Winner::User => 0.0,
-                                Winner::Peer => 835.0,
-                            },
-                            90.0,
-                        ),
-                    );
+                    self.winner_text.pos.x = 90.0
+                        + match winner {
+                            Winner::User => 0.0,
+                            Winner::Peer => 835.0,
+                        };
+                    self.winner_text.draw(ctx, canvas);
                 }
             }
         }

@@ -14,15 +14,15 @@
 
 use ggez::{
     glam::Vec2,
-    graphics::{Color, DrawParam, Image, PxScale, Text, TextFragment},
+    graphics::{Color, DrawParam, Image},
     input::keyboard::KeyInput,
     winit::{event::VirtualKeyCode, platform::unix::x11::ffi::KeyCode},
     Context, GameResult,
 };
 
 use crate::game::{
-    drawable::Drawable, multiplayer::join_scene::JoinMultiplayerScene, player::PLAYER,
-    scene::Scene, tiles::TileState,
+    animation::DrawablePos, drawable::Drawable, multiplayer::join_scene::JoinMultiplayerScene,
+    player::PLAYER, scene::Scene, tiles::TileState, ui::uitext::UIText,
 };
 
 use super::{
@@ -31,7 +31,7 @@ use super::{
 };
 
 pub struct PuzzleView {
-    title_text: Text,
+    title_text: UIText,
 
     // Image
     puzzle_image: Image,
@@ -91,12 +91,12 @@ impl PuzzleView {
             80.0,
         )?;
         Ok(Self {
-            title_text: Text::new(TextFragment {
-                text: format!("Puzzle {}", puzzle_num + 1),
-                color: Some(Color::BLACK),
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(78.0)),
-            }),
+            title_text: UIText::new(
+                format!("Puzzle {}", puzzle_num + 1),
+                Color::BLACK,
+                78.0,
+                DrawablePos { x: 90.0, y: 90.0 },
+            ),
             back: false,
             puzzle_num,
             puzzle_action_mappings,
@@ -108,13 +108,13 @@ impl PuzzleView {
 impl Drawable for PuzzleView {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut ggez::graphics::Canvas) -> GameResult {
         let scale_factor = 300.0 / self.puzzle_image.width() as f32;
-        let text_dim = self.title_text.measure(ctx)?;
+        let text_dim = self.title_text.text.measure(ctx)?;
         canvas.draw(
             &self.puzzle_image,
             DrawParam::from([90.0, 90.0 + text_dim.y + 20.0]).scale([scale_factor; 2]),
         );
         self.puzzle_action_mappings.draw(ctx, canvas)?;
-        canvas.draw(&self.title_text, Vec2::new(90.0, 90.0));
+        self.title_text.draw(ctx, canvas)?;
         Ok(())
     }
 }
