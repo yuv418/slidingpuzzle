@@ -92,7 +92,6 @@ impl GameMenuItemList {
     }
 
     pub fn height(&self) -> f32 {
-        // Count 1 less menu item gap
         (self.h + MENU_ITEM_GAP) * self.items.len() as f32 - MENU_ITEM_GAP
     }
 }
@@ -108,7 +107,7 @@ impl Drawable for GameMenuItemList {
 }
 
 impl Scene for GameMenuItemList {
-    fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, repeat: bool) {
+    fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, _: bool) {
         if let Some(vkeycode) = key_input.keycode {
             match vkeycode {
                 VirtualKeyCode::Up => {

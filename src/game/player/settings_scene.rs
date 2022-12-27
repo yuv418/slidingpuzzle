@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ggez::{glam::Vec2, graphics::Color, input::keyboard::KeyCode, Context, GameResult};
+use ggez::{graphics::Color, input::keyboard::KeyCode, Context, GameResult};
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
@@ -9,7 +9,6 @@ use crate::game::{
     gmenu::{
         game_menu::GameMenu,
         main_menu::MainMenu,
-        menu_item::GameMenuItem,
         menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
     },
     scene::Scene,
@@ -24,13 +23,6 @@ pub struct SettingsScene {
     greeting: Rc<RefCell<UIText>>,
     enter_confirm: Rc<RefCell<UIText>>,
     welcome: Rc<RefCell<UIText>>,
-
-    greeting_visible: bool,
-    welcome_visible: bool,
-    enter_confirm_visible: bool,
-
-    menu_visible: bool,
-
     // Menu options
     options: Rc<RefCell<GameMenuItemList>>,
 
@@ -163,10 +155,6 @@ impl SettingsScene {
             greeting,
             enter_confirm,
             welcome,
-            greeting_visible: false,
-            welcome_visible: false,
-            enter_confirm_visible: false,
-            menu_visible: false,
             options,
             advance_scene: false,
             main: UIText::new(

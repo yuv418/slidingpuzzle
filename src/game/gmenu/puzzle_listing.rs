@@ -1,5 +1,5 @@
 use ggez::{
-    graphics::{self, Color, Image},
+    graphics::{Color, Image},
     winit::event::VirtualKeyCode,
     Context, GameResult,
 };
@@ -9,8 +9,6 @@ use crate::game::{
     scene::Scene, tiles::TileState, ui::uitext::UIText,
 };
 
-#[cfg(feature = "multiplayer")]
-use super::super::multiplayer::join_scene::JoinMultiplayerScene;
 use super::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem};
 
 #[derive(Debug)]

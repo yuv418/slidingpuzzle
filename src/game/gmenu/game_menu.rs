@@ -1,13 +1,10 @@
-use crate::game::{animation::DrawablePos, player::PLAYER, ui::uitext::UIText};
+use crate::game::{animation::DrawablePos, ui::uitext::UIText};
 
-use super::{
-    menu_item::GameMenuItem,
-    menu_item_list::{GameMenuItemList, NewGameMenuItemData},
-};
+use super::menu_item_list::{GameMenuItemList, NewGameMenuItemData};
 
 use crate::game::{drawable::Drawable as SlidingPuzzleDrawable, scene::Scene};
 use ggez::graphics::Canvas;
-use ggez::graphics::{self, Color};
+use ggez::graphics::Color;
 use ggez::input::keyboard::KeyInput;
 use ggez::{Context, GameResult};
 
@@ -21,9 +18,6 @@ pub trait GameMenuData {
 
 pub struct GameMenu {
     menu_mappings: GameMenuItemList,
-    currently_selected: usize,
-    to_next_scene: bool,
-
     title_text: UIText,
 }
 
@@ -47,15 +41,13 @@ impl GameMenu {
                 80.0,
             )?,
             title_text,
-            currently_selected: 0,
-            to_next_scene: false,
         })
     }
 }
 
 impl SlidingPuzzleDrawable for GameMenu {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> ggez::GameResult {
-        self.title_text.draw(ctx, canvas);
+        self.title_text.draw(ctx, canvas)?;
         self.menu_mappings.draw(ctx, canvas)?;
 
         Ok(())

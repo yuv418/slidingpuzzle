@@ -4,7 +4,6 @@ use ggez::{
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
-use keyframe_derive::CanTween;
 
 use crate::game::{
     animation::DrawablePos, drawable::Drawable as SlidingPuzzleDrawable, scene::Scene,
@@ -104,7 +103,6 @@ impl GameMenuItem {
                 y: y + 10.0,
             },
         );
-        let pm_sz = prompt_mesh.text.measure(ctx)?;
         Self::new(
             ctx,
             next_page,
@@ -251,13 +249,7 @@ impl GameMenuItem {
                     frag.color = Some(Color::BLACK);
                 }
             }
-            GameMenuItemVariant::InputItem {
-                is_num,
-                text,
-                prompt_mesh,
-                selected_text_highlight_rect,
-                text_highlight_rect,
-            } => {
+            GameMenuItemVariant::InputItem { prompt_mesh, .. } => {
                 for frag in prompt_mesh.text.fragments_mut() {
                     frag.color = Some(Color::BLACK);
                 }
@@ -282,13 +274,7 @@ impl GameMenuItem {
                 }
             }
 
-            GameMenuItemVariant::InputItem {
-                is_num,
-                text,
-                prompt_mesh,
-                text_highlight_rect,
-                selected_text_highlight_rect,
-            } => {
+            GameMenuItemVariant::InputItem { prompt_mesh, .. } => {
                 for frag in prompt_mesh.text.fragments_mut() {
                     frag.color = Some(Color::WHITE);
                 }
@@ -347,11 +333,11 @@ impl SlidingPuzzleDrawable for GameMenuItem {
                 );
             }
             GameMenuItemVariant::InputItem {
-                is_num,
                 text,
                 prompt_mesh,
                 text_highlight_rect,
                 selected_text_highlight_rect,
+                ..
             } => {
                 canvas.draw(
                     &prompt_mesh.text,

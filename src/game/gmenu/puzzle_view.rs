@@ -13,10 +13,9 @@
 // -> Start game
 
 use ggez::{
-    glam::Vec2,
     graphics::{Color, DrawParam, Image},
     input::keyboard::KeyInput,
-    winit::{event::VirtualKeyCode, platform::unix::x11::ffi::KeyCode},
+    winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 

@@ -1,6 +1,6 @@
 use keyframe_derive::CanTween;
 
-use self::animatable::{Animatable, Tweenable};
+use self::animatable::Tweenable;
 
 pub mod animatable;
 pub mod animation;

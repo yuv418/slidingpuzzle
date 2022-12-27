@@ -9,7 +9,6 @@ use crate::game::{
 
 use super::{
     game_menu::GameMenuData,
-    menu_item::GameMenuItem,
     menu_item_list::{NewGameMenuItemData, NewGameMenuItemDataVariant},
     puzzle_listing::PuzzleListing,
 };
