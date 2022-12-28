@@ -9,7 +9,7 @@ use crate::game::{
     drawable::Drawable,
     gmenu::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem},
     player::PLAYER,
-    puzzle::{puzzle_view::PuzzleView},
+    puzzle::puzzle_view::PuzzleView,
     scene::Scene,
     ui::uitext::UIText,
 };
@@ -67,24 +67,12 @@ impl PuzzleListing {
         // TODO guarantee that at least one item is present
         menu_items[0][0].as_mut().unwrap().select();
 
-        Ok(Self {
-            currently_selected: (0, 0),
-            listing_start,
-            title_mesh,
-            menu_items,
-            page_direction: None,
-            back: false,
-            start_game: false,
-        })
+        Ok(Self { currently_selected: (0, 0), listing_start, title_mesh, menu_items, page_direction: None, back: false, start_game: false })
     }
 }
 
 impl Drawable for PuzzleListing {
-    fn draw(
-        &mut self,
-        ctx: &mut ggez::Context,
-        canvas: &mut ggez::graphics::Canvas,
-    ) -> ggez::GameResult {
+    fn draw(&mut self, ctx: &mut ggez::Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         self.title_mesh.draw(ctx, canvas)?;
 
         for listing_row in &mut self.menu_items {
@@ -99,12 +87,7 @@ impl Drawable for PuzzleListing {
 }
 
 impl Scene for PuzzleListing {
-    fn handle_key_event(
-        &mut self,
-        _ctx: &mut ggez::Context,
-        key_input: ggez::input::keyboard::KeyInput,
-        _repeat: bool,
-    ) {
+    fn handle_key_event(&mut self, _ctx: &mut ggez::Context, key_input: ggez::input::keyboard::KeyInput, _repeat: bool) {
         let old_selected = self.currently_selected;
 
         let (o_i, o_j) = old_selected;
@@ -147,37 +130,26 @@ impl Scene for PuzzleListing {
                 _ => {}
             }
             if old_selected != self.currently_selected {
-                self.menu_items[old_selected.0][old_selected.1]
-                    .as_mut()
-                    .unwrap()
-                    .deselect();
-                self.menu_items[self.currently_selected.0][self.currently_selected.1]
-                    .as_mut()
-                    .unwrap()
-                    .select();
+                self.menu_items[old_selected.0][old_selected.1].as_mut().unwrap().deselect();
+                self.menu_items[self.currently_selected.0][self.currently_selected.1].as_mut().unwrap().select();
             }
         }
     }
 
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {
         if self.back {
-            return Some(Box::new(
-                GameMenu::new::<MainMenu>(ctx).expect("Failed to launch game menu"),
-            ));
+            return Some(Box::new(GameMenu::new::<MainMenu>(ctx).expect("Failed to launch game menu")));
         } else if self.start_game {
             let opt_player = PLAYER.lock().unwrap();
             // Player guaranteed to be some at this point
             let _player = opt_player.as_ref().unwrap();
 
-            let game_image_num =
-                self.listing_start + (self.currently_selected.0 * 2) + self.currently_selected.1;
+            let game_image_num = self.listing_start + (self.currently_selected.0 * 2) + self.currently_selected.1;
 
             println!("starting tile state {}", game_image_num);
             return Some(
                 // TODO move this the puzzle view
-                Box::new(
-                    PuzzleView::new(ctx, game_image_num).expect("Failed to create tile state"),
-                ),
+                Box::new(PuzzleView::new(ctx, game_image_num).expect("Failed to create tile state")),
             );
         }
 
@@ -198,20 +170,14 @@ impl Scene for PuzzleListing {
         let ipath = next_image_path(check_listing);
 
         if ctx.fs.exists(ipath) {
-            Some(Box::new(
-                Self::new(ctx, check_listing).expect("Failed to make prev page of puzzles"),
-            ))
+            Some(Box::new(Self::new(ctx, check_listing).expect("Failed to make prev page of puzzles")))
         } else {
             self.page_direction = None;
             None
         }
     }
 
-    fn draw_transition(
-        &mut self,
-        ctx: &mut ggez::Context,
-        canvas: &mut ggez::graphics::Canvas,
-    ) -> ggez::GameResult {
+    fn draw_transition(&mut self, ctx: &mut ggez::Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         self.draw(ctx, canvas)
     }
 

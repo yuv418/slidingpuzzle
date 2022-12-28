@@ -60,12 +60,7 @@ impl SettingsScene {
         Ok(())
     }
     pub fn new(ctx: &mut Context, intro: bool) -> GameResult<Self> {
-        let greeting = Rc::new(RefCell::new(UIText::new(
-            "Hi!".to_string(),
-            Color::BLACK,
-            58.8,
-            DrawablePos { x: 90.0, y: 90.0 },
-        )));
+        let greeting = Rc::new(RefCell::new(UIText::new("Hi!".to_string(), Color::BLACK, 58.8, DrawablePos { x: 90.0, y: 90.0 })));
         let g_sz = greeting.borrow().text.measure(ctx)?;
 
         let welcome = Rc::new(RefCell::new(UIText::new(
@@ -86,11 +81,7 @@ impl SettingsScene {
                     variant: NewGameMenuItemDataVariant::InputItem {
                         prompt: "Username".to_string(),
                         is_num: false,
-                        initial_value: if let Some(player) = opt_player.as_ref() {
-                            player.username.clone()
-                        } else {
-                            "".to_string()
-                        },
+                        initial_value: if let Some(player) = opt_player.as_ref() { player.username.clone() } else { "".to_string() },
                     },
                     next_page: None,
                 },
@@ -154,22 +145,13 @@ impl SettingsScene {
             welcome,
             options,
             advance_scene: false,
-            main: UIText::new(
-                "Settings".to_string(),
-                Color::BLACK,
-                58.8,
-                DrawablePos { x: 90.0, y: 90.0 },
-            ),
+            main: UIText::new("Settings".to_string(), Color::BLACK, 58.8, DrawablePos { x: 90.0, y: 90.0 }),
         })
     }
 }
 
 impl Drawable for SettingsScene {
-    fn draw(
-        &mut self,
-        ctx: &mut ggez::Context,
-        canvas: &mut ggez::graphics::Canvas,
-    ) -> ggez::GameResult {
+    fn draw(&mut self, ctx: &mut ggez::Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         if let Some(anim) = &mut self.intro_animation {
             if !anim.finished() {
                 anim.advance(0.05);
@@ -192,12 +174,7 @@ impl Scene for SettingsScene {
     fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) {
         self.options.borrow_mut().text_input_event(ctx, c);
     }
-    fn handle_key_event(
-        &mut self,
-        ctx: &mut ggez::Context,
-        key_input: ggez::input::keyboard::KeyInput,
-        repeat: bool,
-    ) {
+    fn handle_key_event(&mut self, ctx: &mut ggez::Context, key_input: ggez::input::keyboard::KeyInput, repeat: bool) {
         if let Some(KeyCode::Return) = key_input.keycode {
             let mut valid_inputs = true;
             for option in &mut self.options.borrow_mut().items {
@@ -207,31 +184,22 @@ impl Scene for SettingsScene {
                 }
             }
             if valid_inputs {
-                self.save_configuration(ctx)
-                    .expect("Failed to save configuration");
+                self.save_configuration(ctx).expect("Failed to save configuration");
             }
         }
         // TODO make sure to handle this only if the opening animations have finished
-        self.options
-            .borrow_mut()
-            .handle_key_event(ctx, key_input, repeat);
+        self.options.borrow_mut().handle_key_event(ctx, key_input, repeat);
     }
 
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {
         if self.advance_scene {
-            Some(Box::new(
-                GameMenu::new::<MainMenu>(ctx).expect("Failed to create game menu"),
-            ))
+            Some(Box::new(GameMenu::new::<MainMenu>(ctx).expect("Failed to create game menu")))
         } else {
             None
         }
     }
 
-    fn draw_transition(
-        &mut self,
-        ctx: &mut ggez::Context,
-        canvas: &mut ggez::graphics::Canvas,
-    ) -> ggez::GameResult {
+    fn draw_transition(&mut self, ctx: &mut ggez::Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         if !self.intro || self.advance_scene {
             self.draw(ctx, canvas)?;
         }

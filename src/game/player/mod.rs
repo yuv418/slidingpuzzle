@@ -40,20 +40,13 @@ impl Player {
     }
     pub fn load(ctx: &mut Context) -> GameResult<Self> {
         let save_file = ctx.fs.open("/player.dat")?;
-        bincode::deserialize_from(save_file)
-            .map_err(|_| ggez::GameError::FilesystemError("Failed to read player.dat".to_string()))
+        bincode::deserialize_from(save_file).map_err(|_| ggez::GameError::FilesystemError("Failed to read player.dat".to_string()))
     }
     pub fn save(&self, ctx: &mut Context) -> GameResult {
         let save_file = ctx.fs.create("/player.dat")?;
-        bincode::serialize_into(save_file, self)
-            .map_err(|_| ggez::GameError::FilesystemError("Failed to save player.dat".to_string()))
+        bincode::serialize_into(save_file, self).map_err(|_| ggez::GameError::FilesystemError("Failed to save player.dat".to_string()))
     }
     pub fn new(username: String, player_settings: PlayerSettings) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            username,
-            completed_puzzles: BTreeMap::new(),
-            player_settings,
-        }
+        Self { id: Uuid::new_v4(), username, completed_puzzles: BTreeMap::new(), player_settings }
     }
 }

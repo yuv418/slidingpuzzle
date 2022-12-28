@@ -1,6 +1,4 @@
-use ggez::{
-    graphics::Image, input::keyboard::KeyInput, winit::event::VirtualKeyCode, Context, GameResult,
-};
+use ggez::{graphics::Image, input::keyboard::KeyInput, winit::event::VirtualKeyCode, Context, GameResult};
 
 use crate::game::{
     animation::{animatable::Animatable, DrawablePos},
@@ -31,35 +29,16 @@ pub struct GameMenuItemList {
 const MENU_ITEM_GAP: f32 = 30.0;
 
 impl GameMenuItemList {
-    pub fn new(
-        ctx: &mut Context,
-        variant_items: Vec<NewGameMenuItemData>,
-        x: f32,
-        start_y: f32,
-        w: f32,
-        h: f32,
-    ) -> GameResult<Self> {
+    pub fn new(ctx: &mut Context, variant_items: Vec<NewGameMenuItemData>, x: f32, start_y: f32, w: f32, h: f32) -> GameResult<Self> {
         let mut items = variant_items
             .into_iter()
             .enumerate()
             .map(|(i, e)| {
                 let y = start_y + ((MENU_ITEM_GAP + h) * i as f32);
                 match e.variant {
-                    NewGameMenuItemDataVariant::TextItem { text } => {
-                        GameMenuItem::new_text_item(ctx, &text, e.next_page, x, y, w, h)
-                    }
+                    NewGameMenuItemDataVariant::TextItem { text } => GameMenuItem::new_text_item(ctx, &text, e.next_page, x, y, w, h),
                     NewGameMenuItemDataVariant::InputItem { is_num, prompt, initial_value } => {
-                        GameMenuItem::new_input_item(
-                            ctx,
-                            &prompt,
-                            initial_value.to_string(),
-                            is_num,
-                            e.next_page,
-                            x,
-                            y,
-                            w,
-                            h,
-                        )
+                        GameMenuItem::new_input_item(ctx, &prompt, initial_value.to_string(), is_num, e.next_page, x, y, w, h)
                     }
                     NewGameMenuItemDataVariant::ImageItem { image, caption } => {
                         GameMenuItem::new_image_item(ctx, image, &caption, e.next_page, x, y, w, h)

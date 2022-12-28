@@ -2,11 +2,7 @@ use rand::Rng;
 
 pub struct TileRandom {}
 impl TileRandom {
-    pub fn random_adjacent_tile(
-        blank_cell: (usize, usize),
-        col_cnt_tiles: usize,
-        row_cnt_tiles: usize,
-    ) -> (usize, usize) {
+    pub fn random_adjacent_tile(blank_cell: (usize, usize), col_cnt_tiles: usize, row_cnt_tiles: usize) -> (usize, usize) {
         // TODO make this static, or something
         let mut rng = rand::thread_rng();
 

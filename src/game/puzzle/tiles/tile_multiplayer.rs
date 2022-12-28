@@ -22,9 +22,7 @@ impl TileMultiplayerTransport {
         if let Some(t) = &self.transport {
             t.event_push_buffer
                 .send(MultiplayerGameMessage::DeleteRandomTile(tile))
-                .map_err(|_| {
-                    GameError::CustomError("Failed to send delete random tile to peer".to_string())
-                })?;
+                .map_err(|_| GameError::CustomError("Failed to send delete random tile to peer".to_string()))?;
         }
         Ok(())
     }

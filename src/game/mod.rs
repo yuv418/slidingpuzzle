@@ -57,12 +57,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
         self.current_scene.text_input_event(ctx, c);
         Ok(())
     }
-    fn key_down_event(
-        &mut self,
-        ctx: &mut Context,
-        key_input: KeyInput,
-        repeat: bool,
-    ) -> GameResult {
+    fn key_down_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) -> GameResult {
         self.current_scene.handle_key_event(ctx, key_input, repeat);
         Ok(())
     }
@@ -70,19 +65,15 @@ impl event::EventHandler<ggez::GameError> for GameState {
         if let None = self.scene_transition {
             if let Some(next_scene) = self.current_scene.next_scene(ctx) {
                 self.prev_scene = Some(std::mem::replace(&mut self.current_scene, next_scene));
-                self.scene_transition = Some(keyframes![
-                    (0.0, 0.0, EaseInOut),
-                    (ctx.gfx.drawable_size().1, 0.2, EaseInOut),
-                    (0.0, 0.4, EaseInOut)
-                ]);
+                self.scene_transition =
+                    Some(keyframes![(0.0, 0.0, EaseInOut), (ctx.gfx.drawable_size().1, 0.2, EaseInOut), (0.0, 0.4, EaseInOut)]);
             }
         }
         self.current_scene.update(ctx)?;
         Ok(())
     }
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult {
-        let mut canvas =
-            graphics::Canvas::from_frame(ctx, graphics::Color::from([1.0, 1.0, 1.0, 1.0]));
+        let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::from([1.0, 1.0, 1.0, 1.0]));
 
         if let Some(seq) = &mut self.scene_transition {
             seq.advance_by(0.01);
@@ -90,20 +81,12 @@ impl event::EventHandler<ggez::GameError> for GameState {
             let cover_rect = Mesh::new_rectangle(
                 ctx,
                 DrawMode::fill(),
-                Rect {
-                    x: 0.0,
-                    y: if seq.progress() > 0.5 { drawable_size.1 - seq.now() } else { 0.0 },
-                    w: drawable_size.0,
-                    h: seq.now(),
-                },
+                Rect { x: 0.0, y: if seq.progress() > 0.5 { drawable_size.1 - seq.now() } else { 0.0 }, w: drawable_size.0, h: seq.now() },
                 Color::WHITE,
             )?;
 
             if seq.progress() < 0.5 {
-                self.prev_scene
-                    .as_mut()
-                    .unwrap()
-                    .draw_transition(ctx, &mut canvas)?;
+                self.prev_scene.as_mut().unwrap().draw_transition(ctx, &mut canvas)?;
             } else if seq.progress() == 0.5 {
                 self.prev_scene = None;
             } else {

@@ -76,9 +76,7 @@ impl<T: Tweenable> Animation<T> {
                         self.check_pop();
                     }
                 }
-                Some(AnimationData::Generator(g)) => {
-                    *self.animations.front_mut().unwrap() = Self::generator_to_seq(g)
-                }
+                Some(AnimationData::Generator(g)) => *self.animations.front_mut().unwrap() = Self::generator_to_seq(g),
                 None => {}
             }
         } else {
@@ -116,9 +114,7 @@ impl<T: Tweenable> Animation<T> {
         }
     }
 
-    fn generator_to_seq(
-        (animatable, final_state, duration): &(Rc<RefCell<dyn Animatable<T>>>, T, f32),
-    ) -> AnimationData<T> {
+    fn generator_to_seq((animatable, final_state, duration): &(Rc<RefCell<dyn Animatable<T>>>, T, f32)) -> AnimationData<T> {
         let keyframes = animatable.borrow_mut().to_state(*final_state, *duration);
         AnimationData::Sequence((animatable.clone(), keyframes))
     }
@@ -148,10 +144,7 @@ impl<T: Tweenable> Animation<T> {
         }
     }
 
-    fn advance_individiual_animation(
-        anim: &mut (Rc<RefCell<dyn Animatable<T>>>, AnimationSequence<T>),
-        s: f64,
-    ) {
+    fn advance_individiual_animation(anim: &mut (Rc<RefCell<dyn Animatable<T>>>, AnimationSequence<T>), s: f64) {
         anim.1.advance_by(s);
         anim.0.borrow_mut().set_state(anim.1.now());
     }

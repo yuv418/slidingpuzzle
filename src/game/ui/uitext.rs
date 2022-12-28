@@ -28,11 +28,7 @@ impl UIText {
 }
 
 impl Drawable for UIText {
-    fn draw(
-        &mut self,
-        _ctx: &mut ggez::Context,
-        canvas: &mut ggez::graphics::Canvas,
-    ) -> ggez::GameResult {
+    fn draw(&mut self, _ctx: &mut ggez::Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         canvas.draw(&self.text, Vec2::new(self.pos.x, self.pos.y));
         Ok(())
     }

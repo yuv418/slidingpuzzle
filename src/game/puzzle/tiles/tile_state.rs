@@ -28,9 +28,7 @@ use crate::game::{
 #[cfg(feature = "multiplayer")]
 use crate::game::multiplayer::MultiplayerGameMessage;
 
-use super::{
-    tile_multiplayer::TileMultiplayerTransport, tile_random::TileRandom, Tile, TilePosition,
-};
+use super::{tile_multiplayer::TileMultiplayerTransport, tile_random::TileRandom, Tile, TilePosition};
 
 enum GameStage {
     StartingAnimation,
@@ -78,42 +76,17 @@ pub struct TileState {
 }
 
 impl TileState {
-    pub fn new_singleplayer(
-        context: &mut Context,
-        img_num: usize,
-        num_rows_cols: usize,
-        x: f32,
-        y: f32,
-    ) -> GameResult<Self> {
-        Self::new(
-            context,
-            img_num,
-            num_rows_cols,
-            x,
-            y,
-            TileMultiplayerTransport::new(None),
-            false,
-        )
+    pub fn new_singleplayer(context: &mut Context, img_num: usize, num_rows_cols: usize, x: f32, y: f32) -> GameResult<Self> {
+        Self::new(context, img_num, num_rows_cols, x, y, TileMultiplayerTransport::new(None), false)
     }
     pub fn new(
-        context: &mut Context,
-        img_num: usize,
-        num_rows_cols: usize,
-        x: f32,
-        y: f32,
-        transport: TileMultiplayerTransport,
-        peer: bool,
+        context: &mut Context, img_num: usize, num_rows_cols: usize, x: f32, y: f32, transport: TileMultiplayerTransport, peer: bool,
     ) -> GameResult<Self> {
         // Peer determines whether or not a game is multiplayer
-        let mut img = ImageReader::new(BufReader::new(
-            context.fs.open(format!("/images/{}.jpg", img_num))?,
-        ));
+        let mut img = ImageReader::new(BufReader::new(context.fs.open(format!("/images/{}.jpg", img_num))?));
         img.set_format(image::ImageFormat::Jpeg);
 
-        let img =
-            img.decode()
-                .expect("failed to open image")
-                .resize(600, 600, FilterType::Lanczos3);
+        let img = img.decode().expect("failed to open image").resize(600, 600, FilterType::Lanczos3);
 
         // How many tiles in a row? In a column?
         let col_cnt_tiles = num_rows_cols; // img.width() / tile_size;
@@ -157,32 +130,14 @@ impl TileState {
 
                 let tile_to_insert = Tile {
                     side_len: tile_size,
-                    image_buf: Image::from_pixels(
-                        context,
-                        &row_buf_pix,
-                        ImageFormat::Rgba8UnormSrgb,
-                        tile_size,
-                        tile_size,
-                    ),
-                    pos: TilePosition::from_ij_no_gap(
-                        i as usize - 1,
-                        j as usize - 1,
-                        tile_size,
-                        tile_state.x,
-                        tile_state.y,
-                    ),
+                    image_buf: Image::from_pixels(context, &row_buf_pix, ImageFormat::Rgba8UnormSrgb, tile_size, tile_size),
+                    pos: TilePosition::from_ij_no_gap(i as usize - 1, j as usize - 1, tile_size, tile_state.x, tile_state.y),
                 };
                 let tile_to_insert = Rc::new(RefCell::new(tile_to_insert));
 
                 tile_state.animation.push_seq(AnimationData::Generator((
                     tile_to_insert.clone(),
-                    TilePosition::from_ij(
-                        i as usize - 1,
-                        j as usize - 1,
-                        tile_size,
-                        tile_state.x,
-                        tile_state.y,
-                    ),
+                    TilePosition::from_ij(i as usize - 1, j as usize - 1, tile_size, tile_state.x, tile_state.y),
                     TILE_SLIDE_DURATION * 4.0,
                 )));
                 tile_row.push(tile_to_insert);
@@ -218,10 +173,7 @@ impl TileState {
             peer_tile
         } else {
             let mut rng = rand::thread_rng();
-            (
-                rng.gen_range(0..self.tiles.len()) as usize,
-                rng.gen_range(0..self.tiles.len()) as usize,
-            )
+            (rng.gen_range(0..self.tiles.len()) as usize, rng.gen_range(0..self.tiles.len()) as usize)
         };
         println!("deleting {:?} from ref board", (i, j));
 
@@ -229,18 +181,8 @@ impl TileState {
         self.animation.push_seq(AnimationData::Generator((
             self.ref_board[i][j].as_ref().unwrap().clone(),
             {
-                let mut x = TilePosition::from_ij_no_gap(
-                    i,
-                    j,
-                    self.ref_board[i][j]
-                        .as_ref()
-                        .unwrap()
-                        .as_ref()
-                        .borrow()
-                        .side_len,
-                    self.x,
-                    self.y,
-                );
+                let mut x =
+                    TilePosition::from_ij_no_gap(i, j, self.ref_board[i][j].as_ref().unwrap().as_ref().borrow().side_len, self.x, self.y);
                 x.scale = 0.0;
                 x
             },
@@ -264,12 +206,7 @@ impl TileState {
         }
     }
 
-    pub fn swap_ref_tiles(
-        &mut self,
-        (i1, j1): (usize, usize),
-        (i2, j2): (usize, usize),
-        duration: f32,
-    ) {
+    pub fn swap_ref_tiles(&mut self, (i1, j1): (usize, usize), (i2, j2): (usize, usize), duration: f32) {
         if !self.peer {
             // Send to peer
             self.transport.swap_tiles((i1, j1), (i2, j2), duration);
@@ -286,16 +223,10 @@ impl TileState {
         }
         // Update coordinates and keyframes
 
-        let tile_update = (*self.ref_board[i1][j1].as_ref().unwrap())
-            .as_ref()
-            .borrow_mut();
+        let tile_update = (*self.ref_board[i1][j1].as_ref().unwrap()).as_ref().borrow_mut();
 
         let new_pos = TilePosition::from_ij(i1, j1, tile_update.side_len, self.x, self.y);
-        self.animation.push_seq(AnimationData::Generator((
-            self.ref_board[i1][j1].as_ref().unwrap().clone(),
-            new_pos,
-            TILE_SLIDE_DURATION,
-        )));
+        self.animation.push_seq(AnimationData::Generator((self.ref_board[i1][j1].as_ref().unwrap().clone(), new_pos, TILE_SLIDE_DURATION)));
     }
 
     pub fn check_completed(&mut self) {
@@ -322,9 +253,7 @@ impl TileState {
                 self.animation.push_seq(AnimationData::Sequence((
                     self.tiles[i][j].clone(),
                     tile.to_state(
-                        TilePosition::from_ij_no_gap(
-                            i as usize, j as usize, side_len, self.x, self.y,
-                        ),
+                        TilePosition::from_ij_no_gap(i as usize, j as usize, side_len, self.x, self.y),
                         TILE_SLIDE_DURATION * 4.0,
                     ),
                 )));
@@ -404,15 +333,11 @@ impl Scene for TileState {
                 if let Some(vkeycode) = key_input.keycode {
                     match vkeycode {
                         // Tile below space
-                        VirtualKeyCode::Up if i + 1 < self.ref_board.len() => {
-                            swap_tile = (i + 1, j)
-                        }
+                        VirtualKeyCode::Up if i + 1 < self.ref_board.len() => swap_tile = (i + 1, j),
                         // Tile above space
                         VirtualKeyCode::Down if i != 0 => swap_tile = (i - 1, j),
                         // Tile left of space
-                        VirtualKeyCode::Left if j + 1 < self.ref_board[i].len() => {
-                            swap_tile = (i, j + 1)
-                        }
+                        VirtualKeyCode::Left if j + 1 < self.ref_board[i].len() => swap_tile = (i, j + 1),
                         // Tile right of space
                         VirtualKeyCode::Right if j != 0 => swap_tile = (i, j - 1),
                         // Cancel game
@@ -454,17 +379,12 @@ impl Scene for TileState {
                         if let Some(statistics) = player.completed_puzzles.get_mut(&self.img_num) {
                             statistics.push(game_stat);
                         } else {
-                            player
-                                .completed_puzzles
-                                .insert(self.img_num, vec![game_stat]);
+                            player.completed_puzzles.insert(self.img_num, vec![game_stat]);
                         }
                         player.save(ctx).expect("Failed to save player statistics");
                     }
                 }
-                Some(Box::new(
-                    PuzzleListing::new(ctx, 4 * ((self.img_num) / 4))
-                        .expect("Failed to return to puzzle listing"),
-                ))
+                Some(Box::new(PuzzleListing::new(ctx, 4 * ((self.img_num) / 4)).expect("Failed to return to puzzle listing")))
             }
             _ => None,
         }

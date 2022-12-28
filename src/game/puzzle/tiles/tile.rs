@@ -68,10 +68,7 @@ impl Animatable<TilePosition> for Tile {
 
 impl Drawable for Tile {
     fn draw(&mut self, _ctx: &mut Context, canvas: &mut Canvas) -> GameResult {
-        canvas.draw(
-            &self.image_buf,
-            DrawParam::from([self.pos.x, self.pos.y]).scale([self.pos.scale; 2]),
-        );
+        canvas.draw(&self.image_buf, DrawParam::from([self.pos.x, self.pos.y]).scale([self.pos.scale; 2]));
         Ok(())
     }
 }

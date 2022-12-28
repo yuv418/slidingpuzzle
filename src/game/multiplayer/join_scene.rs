@@ -10,13 +10,10 @@ use ggez::{graphics::Color, winit::event::VirtualKeyCode, Context, GameError, Ga
 use log::info;
 
 use crate::game::{
-    animation::DrawablePos, drawable::Drawable, player::PLAYER, puzzle::puzzle_view::PuzzleView,
-    scene::Scene, ui::uitext::UIText,
+    animation::DrawablePos, drawable::Drawable, player::PLAYER, puzzle::puzzle_view::PuzzleView, scene::Scene, ui::uitext::UIText,
 };
 
-use super::{
-    game_view::MultiplayerGameView, transport::MultiplayerTransport, MultiplayerGameMessage,
-};
+use super::{game_view::MultiplayerGameView, transport::MultiplayerTransport, MultiplayerGameMessage};
 
 pub struct JoinMultiplayerScene {
     connecting: bool,
@@ -36,12 +33,7 @@ pub struct JoinMultiplayerScene {
 impl JoinMultiplayerScene {
     pub fn new(_ctx: &mut Context, puzzle_num: usize, creator: bool) -> GameResult<Self> {
         let header = UIText::new(
-            if creator {
-                "Create Multiplayer Game"
-            } else {
-                "Join Multiplayer Game"
-            }
-            .to_string(),
+            if creator { "Create Multiplayer Game" } else { "Join Multiplayer Game" }.to_string(),
             Color::BLACK,
             58.0,
             DrawablePos { x: 90.0, y: 90.0 },
@@ -51,21 +43,15 @@ impl JoinMultiplayerScene {
             connecting: !creator,
             creator,
             wait_for_clipboard: UIText::new(
-                "Press Enter when you have copied\nthe other player's connection string."
-                    .to_string(),
+                "Press Enter when you have copied\nthe other player's connection string.".to_string(),
                 Color::BLACK,
                 38.0,
                 DrawablePos { x: 90.0, y: 0.0 },
             ),
             header,
             conn_string: None,
-            transport: if creator {
-                Some(MultiplayerTransport::create_game(None)?)
-            } else {
-                None
-            },
-            clipboard: Clipboard::new()
-                .map_err(|_| GameError::CustomError("Failed to get game clipboard".to_string()))?,
+            transport: if creator { Some(MultiplayerTransport::create_game(None)?) } else { None },
+            clipboard: Clipboard::new().map_err(|_| GameError::CustomError("Failed to get game clipboard".to_string()))?,
             puzzle_num,
             game_cancelled: false,
             game_started: None,
@@ -82,11 +68,7 @@ impl Drawable for JoinMultiplayerScene {
         }
         if self.connecting {
             self.wait_for_clipboard.pos.y = self.header.text.measure(ctx)?.y
-                + if let Some(cs) = &self.conn_string {
-                    cs.text.measure(ctx)?.y
-                } else {
-                    0.0
-                }
+                + if let Some(cs) = &self.conn_string { cs.text.measure(ctx)?.y } else { 0.0 }
                 + 10.0
                 + 90.0;
             self.wait_for_clipboard.draw(ctx, canvas)?;
@@ -97,9 +79,7 @@ impl Drawable for JoinMultiplayerScene {
 
 impl Scene for JoinMultiplayerScene {
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
-        if let Some(MultiplayerGameMessage::StartGame { img_num, num_rows_cols, host_username }) =
-            &self.game_started
-        {
+        if let Some(MultiplayerGameMessage::StartGame { img_num, num_rows_cols, host_username }) = &self.game_started {
             let transport = self.transport.take().unwrap();
             Some(Box::new(
                 MultiplayerGameView::new(
@@ -107,18 +87,12 @@ impl Scene for JoinMultiplayerScene {
                     transport,
                     *img_num,
                     *num_rows_cols,
-                    if self.creator {
-                        self.peer_username.take().unwrap()
-                    } else {
-                        host_username.clone()
-                    },
+                    if self.creator { self.peer_username.take().unwrap() } else { host_username.clone() },
                 )
                 .expect("Failed to create multiplayer game view"),
             ))
         } else if self.game_cancelled {
-            Some(Box::new(
-                PuzzleView::new(ctx, self.puzzle_num).expect("Failed to return to puzzle listing"),
-            ))
+            Some(Box::new(PuzzleView::new(ctx, self.puzzle_num).expect("Failed to return to puzzle listing")))
         } else {
             None
         }
@@ -129,11 +103,9 @@ impl Scene for JoinMultiplayerScene {
             if let Ok(event) = transport.event_buffer.try_recv() {
                 match event {
                     MultiplayerGameMessage::ConnectionString(s) => {
-                        self.clipboard.set_text(&s).map_err(|_| {
-                            GameError::CustomError(
-                                "Failed to copy connection string to clipboard".to_string(),
-                            )
-                        })?;
+                        self.clipboard
+                            .set_text(&s)
+                            .map_err(|_| GameError::CustomError("Failed to copy connection string to clipboard".to_string()))?;
                         self.conn_string = Some(UIText::new(
                             "Copied connection string to clipboard!".to_string(),
                             Color::BLACK,
@@ -173,12 +145,7 @@ impl Scene for JoinMultiplayerScene {
         }
         Ok(())
     }
-    fn handle_key_event(
-        &mut self,
-        _ctx: &mut Context,
-        key_input: ggez::input::keyboard::KeyInput,
-        _repeat: bool,
-    ) {
+    fn handle_key_event(&mut self, _ctx: &mut Context, key_input: ggez::input::keyboard::KeyInput, _repeat: bool) {
         if let Some(vkeycode) = key_input.keycode {
             match vkeycode {
                 VirtualKeyCode::Escape => {
@@ -188,26 +155,17 @@ impl Scene for JoinMultiplayerScene {
                     let conn_str = self
                         .clipboard
                         .get_text()
-                        .map_err(|_| {
-                            GameError::CustomError(
-                                "Failed to get connection string from clipboard".to_string(),
-                            )
-                        })
+                        .map_err(|_| GameError::CustomError("Failed to get connection string from clipboard".to_string()))
                         // Make this method return a result so this doesn't happen
                         .unwrap();
                     if self.creator {
-                        if let Err(_e) = self
-                            .transport
-                            .as_ref()
-                            .unwrap()
-                            .event_push_buffer
-                            .send(MultiplayerGameMessage::ConnectionString(conn_str))
+                        if let Err(_e) =
+                            self.transport.as_ref().unwrap().event_push_buffer.send(MultiplayerGameMessage::ConnectionString(conn_str))
                         {
                             println!("failed to send event");
                         }
                     } else {
-                        self.transport =
-                            Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
+                        self.transport = Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
 
                         self.transport
                             .as_ref()

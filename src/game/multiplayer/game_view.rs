@@ -48,11 +48,7 @@ pub struct MultiplayerGameView {
 
 impl MultiplayerGameView {
     pub fn new(
-        context: &mut Context,
-        transport: MultiplayerTransport,
-        img_num: usize,
-        num_rows_cols: usize,
-        peer_username: String,
+        context: &mut Context, transport: MultiplayerTransport, img_num: usize, num_rows_cols: usize, peer_username: String,
     ) -> GameResult<Self> {
         let transport = Arc::new(transport);
         Ok(Self {
@@ -77,10 +73,7 @@ impl MultiplayerGameView {
             )?,
             separator_line: Mesh::new_line(
                 context,
-                &[
-                    Vec2::new(835.0, 0.0),
-                    Vec2::new(835.0, context.gfx.drawable_size().1),
-                ],
+                &[Vec2::new(835.0, 0.0), Vec2::new(835.0, context.gfx.drawable_size().1)],
                 10.0,
                 Color::RED,
             )?,
@@ -95,10 +88,7 @@ impl MultiplayerGameView {
                     y: 90.0,
                 },
             ),
-            winner_anim: keyframes![
-                (0.0, 0.0, EaseInOut),
-                (context.gfx.drawable_size().1, 2.0, EaseInOut)
-            ],
+            winner_anim: keyframes![(0.0, 0.0, EaseInOut), (context.gfx.drawable_size().1, 2.0, EaseInOut)],
             local_user_text: UIText::new(
                 {
                     let opt_player = PLAYER.lock().unwrap();
@@ -109,12 +99,7 @@ impl MultiplayerGameView {
                 38.0,
                 DrawablePos { x: 90.0, y: 90.0 },
             ),
-            peer_user_text: UIText::new(
-                peer_username,
-                Color::BLACK,
-                38.0,
-                DrawablePos { x: 90.0 + 835.0, y: 90.0 },
-            ),
+            peer_user_text: UIText::new(peer_username, Color::BLACK, 38.0, DrawablePos { x: 90.0 + 835.0, y: 90.0 }),
             game_cancelled: false,
         })
     }
@@ -123,9 +108,7 @@ impl MultiplayerGameView {
 impl Scene for MultiplayerGameView {
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
         if self.game_cancelled {
-            Some(Box::new(
-                PuzzleView::new(ctx, self.img_num).expect("Failed to create puzzle view"),
-            ))
+            Some(Box::new(PuzzleView::new(ctx, self.img_num).expect("Failed to create puzzle view")))
         } else {
             None
         }
@@ -133,33 +116,17 @@ impl Scene for MultiplayerGameView {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         // Logic to check if there is a winner
         if let None = self.winner {
-            if self.peer_tile_state.puzzle_statistics.is_some()
-                && self.user_tile_state.puzzle_statistics.is_none()
-            {
+            if self.peer_tile_state.puzzle_statistics.is_some() && self.user_tile_state.puzzle_statistics.is_none() {
                 // Peer won
                 self.winner = Some(Winner::Peer)
-            } else if self.peer_tile_state.puzzle_statistics.is_none()
-                && self.user_tile_state.puzzle_statistics.is_some()
-            {
+            } else if self.peer_tile_state.puzzle_statistics.is_none() && self.user_tile_state.puzzle_statistics.is_some() {
                 // Local won
                 self.winner = Some(Winner::User)
-            } else if self.peer_tile_state.puzzle_statistics.is_some()
-                && self.user_tile_state.puzzle_statistics.is_some()
-            {
+            } else if self.peer_tile_state.puzzle_statistics.is_some() && self.user_tile_state.puzzle_statistics.is_some() {
                 // Time based reconciliation
-                let peer_fin_time = self
-                    .peer_tile_state
-                    .puzzle_statistics
-                    .as_ref()
-                    .unwrap()
-                    .finish_time;
+                let peer_fin_time = self.peer_tile_state.puzzle_statistics.as_ref().unwrap().finish_time;
 
-                let user_fin_time = self
-                    .user_tile_state
-                    .puzzle_statistics
-                    .as_ref()
-                    .unwrap()
-                    .finish_time;
+                let user_fin_time = self.user_tile_state.puzzle_statistics.as_ref().unwrap().finish_time;
                 if peer_fin_time > user_fin_time {
                     self.winner = Some(Winner::Peer)
                 } else {
@@ -171,8 +138,7 @@ impl Scene for MultiplayerGameView {
         self.peer_tile_state.update(ctx)
     }
     fn handle_key_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) {
-        self.user_tile_state
-            .handle_key_event(ctx, key_input, repeat);
+        self.user_tile_state.handle_key_event(ctx, key_input, repeat);
         // This will eventually get changed
         if let Some(VirtualKeyCode::Escape) = key_input.keycode {
             self.game_cancelled = true;
@@ -181,11 +147,7 @@ impl Scene for MultiplayerGameView {
 }
 
 impl Drawable for MultiplayerGameView {
-    fn draw(
-        &mut self,
-        ctx: &mut ggez::Context,
-        canvas: &mut ggez::graphics::Canvas,
-    ) -> ggez::GameResult {
+    fn draw(&mut self, ctx: &mut ggez::Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         self.user_tile_state.draw(ctx, canvas)?;
         canvas.draw(&self.separator_line, Vec2::new(0.0, 0.0));
         self.peer_tile_state.draw(ctx, canvas)?;

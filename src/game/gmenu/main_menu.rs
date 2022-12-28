@@ -24,13 +24,7 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
                 // We'll have to add some kind of check to make sure
                 // that the player hasn't actually completed the entire game,
                 // otherwise this would cause problems.
-                player
-                    .completed_puzzles
-                    .iter()
-                    .next_back()
-                    .expect("Failed to get max completed puzzle")
-                    .0
-                    + 1
+                player.completed_puzzles.iter().next_back().expect("Failed to get max completed puzzle").0 + 1
             } else {
                 0
             },
@@ -45,10 +39,7 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
 }
 
 pub fn join_multiplayer(context: &mut Context) -> Box<dyn Scene> {
-    Box::new(
-        JoinMultiplayerScene::new(context, 0, false)
-            .expect("Failed to create join multiplayer scene"),
-    )
+    Box::new(JoinMultiplayerScene::new(context, 0, false).expect("Failed to create join multiplayer scene"))
 }
 
 pub fn settings_scene(context: &mut Context) -> Box<dyn Scene> {
@@ -69,15 +60,11 @@ impl GameMenuData for MainMenu {
                 next_page: Some(Box::new(continue_game)),
             },
             NewGameMenuItemData {
-                variant: NewGameMenuItemDataVariant::TextItem {
-                    text: "Join Multiplayer".to_string(),
-                },
+                variant: NewGameMenuItemDataVariant::TextItem { text: "Join Multiplayer".to_string() },
                 next_page: Some(Box::new(join_multiplayer)),
             },
             NewGameMenuItemData {
-                variant: NewGameMenuItemDataVariant::TextItem {
-                    text: "Choose a Puzzle".to_string(),
-                },
+                variant: NewGameMenuItemDataVariant::TextItem { text: "Choose a Puzzle".to_string() },
                 next_page: Some(Box::new(choose_puzzle)),
             },
             NewGameMenuItemData {

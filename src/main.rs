@@ -13,11 +13,7 @@ pub fn main() -> GameResult {
     env_logger::init();
     let mut cb = ggez::ContextBuilder::new("SlidingPuzzle", "cdknight")
         .window_setup(ggez::conf::WindowSetup::default().title("Sliding Puzzle"))
-        .window_mode(
-            ggez::conf::WindowMode::default()
-                .min_dimensions(1820.0, 1030.0)
-                .resizable(true),
-        );
+        .window_mode(ggez::conf::WindowMode::default().min_dimensions(1820.0, 1030.0).resizable(true));
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
         let mut path = PathBuf::from(manifest_dir);
         path.push("resources");
@@ -26,10 +22,7 @@ pub fn main() -> GameResult {
     }
     let (mut ctx, event_loop) = cb.build()?;
 
-    ctx.gfx.add_font(
-        "SecularOne-Regular",
-        graphics::FontData::from_path(&ctx, "/fonts/SecularOne-Regular.ttf")?,
-    );
+    ctx.gfx.add_font("SecularOne-Regular", graphics::FontData::from_path(&ctx, "/fonts/SecularOne-Regular.ttf")?);
 
     /*
              180 px top padding

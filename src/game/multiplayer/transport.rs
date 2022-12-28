@@ -9,8 +9,8 @@ use webrtc::{
     ice_transport::ice_server::RTCIceServer,
     interceptor::registry::Registry,
     peer_connection::{
-        configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
-        sdp::session_description::RTCSessionDescription, RTCPeerConnection,
+        configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState, sdp::session_description::RTCSessionDescription,
+        RTCPeerConnection,
     },
     Error,
 };
@@ -26,26 +26,16 @@ pub struct MultiplayerTransport {
 impl MultiplayerTransport {
     async fn setup() -> GameResult<Arc<RTCPeerConnection>> {
         let mut engine = MediaEngine::default();
-        engine.register_default_codecs().map_err(|_| {
-            GameError::CustomError("Failed to register media engine codecs".to_string())
-        })?;
+        engine.register_default_codecs().map_err(|_| GameError::CustomError("Failed to register media engine codecs".to_string()))?;
         let mut registry = Registry::new();
         registry = interceptor_registry::register_default_interceptors(registry, &mut engine)
-            .map_err(|_| {
-                GameError::CustomError("Failed to register default interceptors".to_string())
-            })?;
+            .map_err(|_| GameError::CustomError("Failed to register default interceptors".to_string()))?;
 
-        let api = APIBuilder::new()
-            .with_media_engine(engine)
-            .with_interceptor_registry(registry)
-            .build();
+        let api = APIBuilder::new().with_media_engine(engine).with_interceptor_registry(registry).build();
 
         let rtc_conf = RTCConfiguration {
             ice_servers: vec![
-                RTCIceServer {
-                    urls: vec!["stun:stun.l.google.com:19302".to_owned()],
-                    ..Default::default()
-                },
+                RTCIceServer { urls: vec!["stun:stun.l.google.com:19302".to_owned()], ..Default::default() },
                 RTCIceServer {
                     urls: vec!["turn:openrelay.metered.ca:80".to_owned()],
                     username: "openrelayproject".to_string(),
@@ -62,10 +52,9 @@ impl MultiplayerTransport {
             ..Default::default()
         };
 
-        let peer_conn =
-            Arc::new(api.new_peer_connection(rtc_conf).await.map_err(|_| {
-                GameError::CustomError("Failed to make peer connection".to_string())
-            })?);
+        let peer_conn = Arc::new(
+            api.new_peer_connection(rtc_conf).await.map_err(|_| GameError::CustomError("Failed to make peer connection".to_string()))?,
+        );
 
         Ok(peer_conn)
     }
@@ -76,10 +65,7 @@ impl MultiplayerTransport {
     //
     // Clients can use the flume queue to communicate with the peer
 
-    async fn channel_msg_handler(
-        msg: DataChannelMessage,
-        tx: Arc<flume::Sender<MultiplayerGameMessage>>,
-    ) {
+    async fn channel_msg_handler(msg: DataChannelMessage, tx: Arc<flume::Sender<MultiplayerGameMessage>>) {
         if let Ok(msg_decode) = bincode::deserialize::<MultiplayerGameMessage>(&msg.data) {
             trace!("Channel msg handled {:?}", msg_decode);
             if let Err(e) = tx.send_async(msg_decode).await {
@@ -89,9 +75,7 @@ impl MultiplayerTransport {
     }
 
     async fn channel_push_handler(
-        push_rx: Arc<flume::Receiver<MultiplayerGameMessage>>,
-        exit_tx: flume::Sender<bool>,
-        channel: Arc<RTCDataChannel>,
+        push_rx: Arc<flume::Receiver<MultiplayerGameMessage>>, exit_tx: flume::Sender<bool>, channel: Arc<RTCDataChannel>,
     ) {
         while let Ok(msg) = push_rx.recv_async().await {
             if let Ok(ser_msg) = bincode::serialize(&msg) {
@@ -111,20 +95,13 @@ impl MultiplayerTransport {
     where
         T: DeserializeOwned,
     {
-        let json = base64::decode(conn_string).map_err(|_| {
-            GameError::ConfigError("Failed to decode base64 conn string".to_string())
-        })?;
-        serde_json::from_slice(&json).map_err(|_| {
-            GameError::ConfigError(
-                "Failed to convert connection string to RTCSessionDescription".to_string(),
-            )
-        })
+        let json = base64::decode(conn_string).map_err(|_| GameError::ConfigError("Failed to decode base64 conn string".to_string()))?;
+        serde_json::from_slice(&json)
+            .map_err(|_| GameError::ConfigError("Failed to convert connection string to RTCSessionDescription".to_string()))
     }
 
     async fn create_game_async(
-        conn_string: Option<String>,
-        tx: flume::Sender<MultiplayerGameMessage>,
-        rx: flume::Receiver<MultiplayerGameMessage>,
+        conn_string: Option<String>, tx: flume::Sender<MultiplayerGameMessage>, rx: flume::Receiver<MultiplayerGameMessage>,
     ) -> GameResult {
         let peer_conn = Self::setup().await?;
 
@@ -139,9 +116,7 @@ impl MultiplayerTransport {
             let channel = peer_conn
                 .create_data_channel("MultiplayerGameData", None)
                 .await
-                .map_err(|_| {
-                    GameError::CustomError("Failed to create a data channel".to_string())
-                })?;
+                .map_err(|_| GameError::CustomError("Failed to create a data channel".to_string()))?;
 
             let channel_c = channel.clone();
             let rx_cc = rx_c.clone();
@@ -214,35 +189,30 @@ impl MultiplayerTransport {
 
         let offer = if let Some(c_s) = &conn_string {
             let offer = Self::session_desc_from_str::<RTCSessionDescription>(c_s.to_string())?;
-            peer_conn.set_remote_description(offer).await.map_err(|e| {
-                GameError::CustomError(format!("Failed to set remote description {:?}", e))
-            })?;
-            let answer = peer_conn
-                .create_answer(None)
+            peer_conn
+                .set_remote_description(offer)
                 .await
-                .map_err(|e| GameError::CustomError(format!("Failed to create answer {:?}", e)))?;
+                .map_err(|e| GameError::CustomError(format!("Failed to set remote description {:?}", e)))?;
+            let answer =
+                peer_conn.create_answer(None).await.map_err(|e| GameError::CustomError(format!("Failed to create answer {:?}", e)))?;
             answer
         } else {
-            peer_conn
-                .create_offer(None)
-                .await
-                .map_err(|_| GameError::CustomError("Failed to create offer".to_string()))?
+            peer_conn.create_offer(None).await.map_err(|_| GameError::CustomError("Failed to create offer".to_string()))?
         };
         let mut g_c = peer_conn.gathering_complete_promise().await;
-        peer_conn.set_local_description(offer).await.map_err(|e| {
-            GameError::CustomError(format!("Failed to set local description {:?}", e))
-        })?;
+        peer_conn
+            .set_local_description(offer)
+            .await
+            .map_err(|e| GameError::CustomError(format!("Failed to set local description {:?}", e)))?;
         g_c.recv().await;
 
         // Push this into the tx
         let base64_conn_str = if let Some(l_d) = peer_conn.local_description().await {
-            base64::encode(serde_json::to_string(&l_d).map_err(|_e| {
-                GameError::CustomError("Failed to convert peer base64 to json".to_string())
-            })?)
+            base64::encode(
+                serde_json::to_string(&l_d).map_err(|_e| GameError::CustomError("Failed to convert peer base64 to json".to_string()))?,
+            )
         } else {
-            return Err(GameError::CustomError(
-                "Failed to get peer base64".to_string(),
-            ));
+            return Err(GameError::CustomError("Failed to get peer base64".to_string()));
         };
 
         tx.send(MultiplayerGameMessage::ConnectionString(base64_conn_str))
@@ -251,10 +221,7 @@ impl MultiplayerTransport {
         if conn_string.is_none() {
             if let Ok(MultiplayerGameMessage::ConnectionString(s)) = rx.recv() {
                 peer_conn
-                    .set_remote_description(
-                        Self::session_desc_from_str(s)
-                            .expect("Failed to parse remote description string"),
-                    )
+                    .set_remote_description(Self::session_desc_from_str(s).expect("Failed to parse remote description string"))
                     .await
                     .expect("Failed to set remote description");
                 println!("peer conn has set remote desc");
@@ -267,16 +234,12 @@ impl MultiplayerTransport {
     }
 
     pub fn create_game(conn_string: Option<String>) -> GameResult<Self> {
-        let rt = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
 
         let (tx, rx) = flume::unbounded::<MultiplayerGameMessage>();
         let (push_tx, push_rx) = flume::unbounded::<MultiplayerGameMessage>();
         std::thread::spawn(move || {
-            rt.block_on(Self::create_game_async(conn_string, push_tx, rx))
-                .unwrap();
+            rt.block_on(Self::create_game_async(conn_string, push_tx, rx)).unwrap();
         });
 
         Ok(Self { event_buffer: push_rx, event_push_buffer: tx })
