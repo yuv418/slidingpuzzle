@@ -12,9 +12,7 @@ use ggez::{Context, GameResult};
 pub trait GameMenuData {
     fn menu_mappings() -> Vec<NewGameMenuItemData>;
     fn title() -> String;
-    fn below_menu_text() -> Option<String> {
-        None
-    }
+    fn below_menu_text() -> Option<String> { None }
 }
 
 pub struct GameMenu {
@@ -45,7 +43,5 @@ impl Scene for GameMenu {
         self.menu_mappings.handle_key_event(ctx, key_input, repeat);
     }
 
-    fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {
-        self.menu_mappings.next_scene(ctx)
-    }
+    fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> { self.menu_mappings.next_scene(ctx) }
 }

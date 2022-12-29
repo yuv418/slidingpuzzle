@@ -1,7 +1,4 @@
-use ggez::{
-    winit::event::VirtualKeyCode,
-    Context, GameResult,
-};
+use ggez::{winit::event::VirtualKeyCode, Context, GameResult};
 
 use crate::game::{
     animation::DrawablePos,

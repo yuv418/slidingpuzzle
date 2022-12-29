@@ -41,22 +41,10 @@ impl Theme {
     }
 
     // TODO IMPORTANT are these functions memoized?
-    pub fn bg_color() -> Color {
-        THEME.lock().unwrap().as_ref().unwrap().bg_color
-    }
-    pub fn fg_color() -> Color {
-        THEME.lock().unwrap().as_ref().unwrap().fg_color
-    }
-    pub fn border_color() -> Color {
-        THEME.lock().unwrap().as_ref().unwrap().border_color
-    }
-    pub fn error_color() -> Color {
-        THEME.lock().unwrap().as_ref().unwrap().error_color
-    }
-    pub fn sep_color() -> Color {
-        THEME.lock().unwrap().as_ref().unwrap().sep_color
-    }
-    pub fn font() -> String {
-        THEME.lock().unwrap().as_ref().unwrap().font.clone()
-    }
+    pub fn bg_color() -> Color { THEME.lock().unwrap().as_ref().unwrap().bg_color }
+    pub fn fg_color() -> Color { THEME.lock().unwrap().as_ref().unwrap().fg_color }
+    pub fn border_color() -> Color { THEME.lock().unwrap().as_ref().unwrap().border_color }
+    pub fn error_color() -> Color { THEME.lock().unwrap().as_ref().unwrap().error_color }
+    pub fn sep_color() -> Color { THEME.lock().unwrap().as_ref().unwrap().sep_color }
+    pub fn font() -> String { THEME.lock().unwrap().as_ref().unwrap().font.clone() }
 }

@@ -39,9 +39,7 @@ enum GameStage {
 }
 
 impl Default for GameStage {
-    fn default() -> Self {
-        Self::StartingAnimation
-    }
+    fn default() -> Self { Self::StartingAnimation }
 }
 
 // TODO: Add tile scale animation when the game is finished.

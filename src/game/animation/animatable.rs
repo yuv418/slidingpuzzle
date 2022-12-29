@@ -8,7 +8,5 @@ where
 {
     // Set animation state of item
     fn set_state(&mut self, now: T);
-    fn to_state(&self, _to: T, _duration: f32) -> AnimationSequence<T> {
-        keyframes![]
-    }
+    fn to_state(&self, _to: T, _duration: f32) -> AnimationSequence<T> { keyframes![] }
 }

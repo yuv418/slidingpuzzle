@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-
 use ggez::{event, GameResult};
 
 mod game;

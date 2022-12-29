@@ -52,9 +52,7 @@ impl TilePosition {
 }
 
 impl Animatable<TilePosition> for Tile {
-    fn set_state(&mut self, now: TilePosition) {
-        self.pos = now;
-    }
+    fn set_state(&mut self, now: TilePosition) { self.pos = now; }
 
     fn to_state(&self, to: TilePosition, duration: f32) -> AnimationSequence<TilePosition> {
         // Keyframe all the tiles.

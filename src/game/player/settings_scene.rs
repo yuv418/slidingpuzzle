@@ -172,9 +172,7 @@ impl Drawable for SettingsScene {
     }
 }
 impl Scene for SettingsScene {
-    fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) {
-        self.options.borrow_mut().text_input_event(ctx, c);
-    }
+    fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) { self.options.borrow_mut().text_input_event(ctx, c); }
     fn handle_key_event(&mut self, ctx: &mut ggez::Context, key_input: ggez::input::keyboard::KeyInput, repeat: bool) {
         if let Some(KeyCode::Return) = key_input.keycode {
             let mut valid_inputs = true;

@@ -1,6 +1,3 @@
-
-
-
 use self::resources::theme::Theme;
 use self::resources::ResourceManager;
 use self::scene::Scene;

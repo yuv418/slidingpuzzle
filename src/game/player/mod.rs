@@ -35,9 +35,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn username(&self) -> String {
-        self.username.clone()
-    }
+    pub fn username(&self) -> String { self.username.clone() }
     pub fn load(ctx: &mut Context) -> GameResult<Self> {
         let save_file = ctx.fs.open("/player.dat")?;
         bincode::deserialize_from(save_file).map_err(|_| ggez::GameError::FilesystemError("Failed to read player.dat".to_string()))

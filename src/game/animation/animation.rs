@@ -52,9 +52,7 @@ impl<T: Tweenable> Animation<T> {
     }
 
     // Pushes a sequence onto the animation "queue"
-    pub fn push_seq(&mut self, anim: AnimationData<T>) {
-        self.animations.push_back(anim);
-    }
+    pub fn push_seq(&mut self, anim: AnimationData<T>) { self.animations.push_back(anim); }
 
     pub fn advance(&mut self, s: f64) {
         // Treat the animations as a queue
@@ -149,7 +147,5 @@ impl<T: Tweenable> Animation<T> {
         anim.0.borrow_mut().set_state(anim.1.now());
     }
 
-    pub fn finished(&self) -> bool {
-        self.animations.is_empty()
-    }
+    pub fn finished(&self) -> bool { self.animations.is_empty() }
 }

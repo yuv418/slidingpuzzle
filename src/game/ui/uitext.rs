@@ -31,7 +31,5 @@ impl Drawable for UIText {
 }
 
 impl Animatable<DrawablePos> for UIText {
-    fn set_state(&mut self, now: DrawablePos) {
-        self.pos = now;
-    }
+    fn set_state(&mut self, now: DrawablePos) { self.pos = now; }
 }

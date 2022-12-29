@@ -221,7 +221,11 @@ impl GameMenuItem {
 impl SlidingPuzzleDrawable for GameMenuItem {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut ggez::graphics::Canvas) -> ggez::GameResult {
         canvas.draw(
-            if self.currently_selected && self.select_animation.is_none() { &self.border_box_rect } else { &self.item_box_rect },
+            if self.currently_selected && self.select_animation.is_none() {
+                &self.border_box_rect
+            } else {
+                &self.item_box_rect
+            },
             Vec2::new(self.pos.x, self.pos.y),
         );
         if self.currently_selected || self.select_animation.is_some() {

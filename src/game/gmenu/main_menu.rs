@@ -74,7 +74,5 @@ impl GameMenuData for MainMenu {
         ]
     }
 
-    fn title() -> String {
-        "Sliding Puzzle".to_string()
-    }
+    fn title() -> String { "Sliding Puzzle".to_string() }
 }

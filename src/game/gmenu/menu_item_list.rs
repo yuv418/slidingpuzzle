@@ -53,9 +53,7 @@ impl GameMenuItemList {
         Ok(Self { items, selected_item, w, h, has_next_scene: false })
     }
 
-    pub fn height(&self) -> f32 {
-        (self.h + MENU_ITEM_GAP) * self.items.len() as f32 - MENU_ITEM_GAP
-    }
+    pub fn height(&self) -> f32 { (self.h + MENU_ITEM_GAP) * self.items.len() as f32 - MENU_ITEM_GAP }
 }
 
 impl Drawable for GameMenuItemList {

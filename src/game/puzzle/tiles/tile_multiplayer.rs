@@ -14,9 +14,7 @@ pub struct TileMultiplayerTransport {
 }
 
 impl TileMultiplayerTransport {
-    pub fn new(transport: Option<Arc<MultiplayerTransport>>) -> Self {
-        Self { transport }
-    }
+    pub fn new(transport: Option<Arc<MultiplayerTransport>>) -> Self { Self { transport } }
 
     pub fn delete_random_tile(&mut self, tile: (usize, usize)) -> GameResult {
         if let Some(t) = &self.transport {
