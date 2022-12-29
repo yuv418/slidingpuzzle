@@ -83,6 +83,17 @@ impl TileState {
         context: &mut Context, img_num: usize, num_rows_cols: usize, x: f32, y: f32, transport: TileMultiplayerTransport, peer: bool,
     ) -> GameResult<Self> {
         // Peer determines whether or not a game is multiplayer
+        /* Cannot use ImageLoader here b/c of this error in to_pixels ---
+        thread 'main' panicked at 'wgpu error: Validation Error
+
+        Caused by:
+            In CommandEncoder::copy_texture_to_buffer
+            Copy error
+            bytes per row does not respect `COPY_BYTES_PER_ROW_ALIGNMENT`
+
+        ', /home/nonuser/.cargo/registry/src/github.com-1ecc6299db9ec823/wgpu-0.14.2/src/backend/direct.rs:2403:5
+                */
+
         let mut img = ImageReader::new(BufReader::new(context.fs.open(format!("/images/{}.jpg", img_num))?));
         img.set_format(image::ImageFormat::Jpeg);
 

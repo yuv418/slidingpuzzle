@@ -6,6 +6,7 @@ use ggez::{
 use crate::game::{
     animation::{animatable::Animatable, DrawablePos},
     drawable::Drawable,
+    resources::theme::Theme,
 };
 
 pub struct UIText {
@@ -16,12 +17,7 @@ pub struct UIText {
 impl UIText {
     pub fn new(text: String, color: Color, size: f32, pos: DrawablePos) -> Self {
         Self {
-            text: Text::new(TextFragment {
-                text,
-                font: Some("SecularOne-Regular".into()),
-                scale: Some(PxScale::from(size)),
-                color: Some(color),
-            }),
+            text: Text::new(TextFragment { text, font: Some(Theme::font()), scale: Some(PxScale::from(size)), color: Some(color) }),
             pos,
         }
     }

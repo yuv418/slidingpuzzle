@@ -1,10 +1,11 @@
+use crate::game::resources::theme::Theme;
 use crate::game::{animation::DrawablePos, ui::uitext::UIText};
 
 use super::menu_item_list::{GameMenuItemList, NewGameMenuItemData};
 
 use crate::game::{drawable::Drawable as SlidingPuzzleDrawable, scene::Scene};
 use ggez::graphics::Canvas;
-use ggez::graphics::Color;
+
 use ggez::input::keyboard::KeyInput;
 use ggez::{Context, GameResult};
 
@@ -23,7 +24,7 @@ pub struct GameMenu {
 
 impl GameMenu {
     pub fn new<T: GameMenuData>(ctx: &mut Context) -> GameResult<Self> {
-        let title_text = UIText::new(T::title(), Color::BLACK, 78.0, DrawablePos { x: 90.0, y: 90.0 });
+        let title_text = UIText::new(T::title(), Theme::fg_color(), 78.0, DrawablePos { x: 90.0, y: 90.0 });
 
         let tx_s = title_text.text.measure(ctx)?;
         Ok(Self { menu_mappings: GameMenuItemList::new(ctx, T::menu_mappings(), 90.0, tx_s.y + 110.0, tx_s.x, 80.0)?, title_text })

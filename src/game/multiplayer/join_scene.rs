@@ -6,11 +6,12 @@
 // Display conn string + copy clipboard + wait for clipboard
 
 use arboard::Clipboard;
-use ggez::{graphics::Color, winit::event::VirtualKeyCode, Context, GameError, GameResult};
+use ggez::{winit::event::VirtualKeyCode, Context, GameError, GameResult};
 use log::info;
 
 use crate::game::{
-    animation::DrawablePos, drawable::Drawable, player::PLAYER, puzzle::puzzle_view::PuzzleView, scene::Scene, ui::uitext::UIText,
+    animation::DrawablePos, drawable::Drawable, player::PLAYER, puzzle::puzzle_view::PuzzleView, resources::theme::Theme, scene::Scene,
+    ui::uitext::UIText,
 };
 
 use super::{game_view::MultiplayerGameView, transport::MultiplayerTransport, MultiplayerGameMessage};
@@ -34,7 +35,7 @@ impl JoinMultiplayerScene {
     pub fn new(_ctx: &mut Context, puzzle_num: usize, creator: bool) -> GameResult<Self> {
         let header = UIText::new(
             if creator { "Create Multiplayer Game" } else { "Join Multiplayer Game" }.to_string(),
-            Color::BLACK,
+            Theme::fg_color(),
             58.0,
             DrawablePos { x: 90.0, y: 90.0 },
         );
@@ -44,7 +45,7 @@ impl JoinMultiplayerScene {
             creator,
             wait_for_clipboard: UIText::new(
                 "Press Enter when you have copied\nthe other player's connection string.".to_string(),
-                Color::BLACK,
+                Theme::fg_color(),
                 38.0,
                 DrawablePos { x: 90.0, y: 0.0 },
             ),
@@ -108,7 +109,7 @@ impl Scene for JoinMultiplayerScene {
                             .map_err(|_| GameError::CustomError("Failed to copy connection string to clipboard".to_string()))?;
                         self.conn_string = Some(UIText::new(
                             "Copied connection string to clipboard!".to_string(),
-                            Color::BLACK,
+                            Theme::fg_color(),
                             48.0,
                             DrawablePos { x: 90.0, y: self.header.text.measure(ctx)?.y + 90.0 },
                         ));

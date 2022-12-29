@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ggez::{
     glam::Vec2,
-    graphics::{Color, DrawMode, Mesh, Rect},
+    graphics::{DrawMode, Mesh, Rect},
     input::keyboard::KeyInput,
     winit::event::VirtualKeyCode,
     Context, GameResult,
@@ -17,6 +17,7 @@ use crate::game::{
         puzzle_view::PuzzleView,
         tiles::{tile_multiplayer::TileMultiplayerTransport, TileState},
     },
+    resources::theme::Theme,
     scene::Scene,
     ui::uitext::UIText,
 };
@@ -75,12 +76,12 @@ impl MultiplayerGameView {
                 context,
                 &[Vec2::new(835.0, 0.0), Vec2::new(835.0, context.gfx.drawable_size().1)],
                 10.0,
-                Color::RED,
+                Theme::sep_color(),
             )?,
             winner: None,
             winner_text: UIText::new(
                 "Winner!".to_string(),
-                Color::BLACK,
+                Theme::fg_color(),
                 88.0,
                 DrawablePos {
                     // We don't know x right now.
@@ -95,11 +96,11 @@ impl MultiplayerGameView {
                     let player = opt_player.as_ref().unwrap();
                     player.username()
                 },
-                Color::BLACK,
+                Theme::fg_color(),
                 38.0,
                 DrawablePos { x: 90.0, y: 90.0 },
             ),
-            peer_user_text: UIText::new(peer_username, Color::BLACK, 38.0, DrawablePos { x: 90.0 + 835.0, y: 90.0 }),
+            peer_user_text: UIText::new(peer_username, Theme::fg_color(), 38.0, DrawablePos { x: 90.0 + 835.0, y: 90.0 }),
             game_cancelled: false,
         })
     }
@@ -176,7 +177,7 @@ impl Drawable for MultiplayerGameView {
                         w: 800.0,
                         h: self.winner_anim.now(),
                     },
-                    Color::WHITE,
+                    Theme::bg_color(),
                 )?;
                 canvas.draw(&cover_rect, Vec2::new(0.0, 0.0));
                 if self.winner_anim.finished() {

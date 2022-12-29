@@ -1,5 +1,4 @@
 use ggez::{
-    graphics::{Color, Image},
     winit::event::VirtualKeyCode,
     Context, GameResult,
 };
@@ -10,6 +9,7 @@ use crate::game::{
     gmenu::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem},
     player::PLAYER,
     puzzle::puzzle_view::PuzzleView,
+    resources::{image_loader::ImageLoader, theme::Theme},
     scene::Scene,
     ui::uitext::UIText,
 };
@@ -35,7 +35,7 @@ impl PuzzleListing {
     pub fn new(ctx: &mut Context, listing_start: usize) -> GameResult<Self> {
         let title_mesh = UIText::new(
             format!("Puzzles {} to {}", listing_start + 1, listing_start + 4),
-            Color::BLACK,
+            Theme::fg_color(),
             78.0,
             DrawablePos { x: 45.0, y: 45.0 },
         );
@@ -47,11 +47,10 @@ impl PuzzleListing {
         for i in 0..menu_items.len() {
             for j in 0..menu_items[i].len() {
                 let puzzle_num = listing_start + (i * 2) + j;
-                let puzzle_path = format!("/images/{}.jpg", puzzle_num);
-                if ctx.fs.exists(&puzzle_path) {
+                if let Some(img) = ImageLoader::get_img(puzzle_num) {
                     menu_items[i][j] = Some(GameMenuItem::new_image_item(
                         ctx,
-                        Image::from_path(ctx, puzzle_path)?,
+                        img,
                         &format!("Puzzle {}", puzzle_num + 1),
                         // This should never happen, so we can panic if it does.
                         Some(Box::new(|_| -> Box<dyn Scene> { panic!() })),
@@ -94,17 +93,15 @@ impl Scene for PuzzleListing {
 
         if let Some(vkeycode) = key_input.keycode {
             match vkeycode {
-                VirtualKeyCode::Up => {
+                VirtualKeyCode::Up =>
                     if self.currently_selected.0 > 0 {
                         self.currently_selected.0 -= 1;
-                    }
-                }
+                    },
 
-                VirtualKeyCode::Down => {
+                VirtualKeyCode::Down =>
                     if self.currently_selected.0 < 1 && self.menu_items[o_i + 1][o_j].is_some() {
                         self.currently_selected.0 += 1;
-                    }
-                }
+                    },
                 VirtualKeyCode::Left => {
                     if self.currently_selected.1 > 0 {
                         self.currently_selected.1 -= 1;
@@ -153,23 +150,19 @@ impl Scene for PuzzleListing {
             );
         }
 
-        let next_image_path = |num: usize| -> String { format!("/images/{}.jpg", num) };
-
         let check_listing = match self.page_direction {
             None => return None,
-            Some(PaginationDirection::Left) => {
+            Some(PaginationDirection::Left) =>
                 if self.listing_start >= 4 {
                     self.listing_start - 4
                 } else {
                     return None;
-                }
-            }
+                },
 
             Some(PaginationDirection::Right) => self.listing_start + 4,
         };
-        let ipath = next_image_path(check_listing);
 
-        if ctx.fs.exists(ipath) {
+        if ImageLoader::has_img(check_listing) {
             Some(Box::new(Self::new(ctx, check_listing).expect("Failed to make prev page of puzzles")))
         } else {
             self.page_direction = None;

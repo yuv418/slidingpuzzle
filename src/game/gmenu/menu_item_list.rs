@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ggez::{graphics::Image, input::keyboard::KeyInput, winit::event::VirtualKeyCode, Context, GameResult};
 
 use crate::game::{
@@ -11,7 +13,7 @@ use super::menu_item::GameMenuItem;
 pub enum NewGameMenuItemDataVariant {
     TextItem { text: String },
     InputItem { is_num: bool, prompt: String, initial_value: String },
-    ImageItem { image: Image, caption: String },
+    ImageItem { image: Arc<Image>, caption: String },
 }
 pub struct NewGameMenuItemData {
     pub variant: NewGameMenuItemDataVariant,
@@ -37,12 +39,10 @@ impl GameMenuItemList {
                 let y = start_y + ((MENU_ITEM_GAP + h) * i as f32);
                 match e.variant {
                     NewGameMenuItemDataVariant::TextItem { text } => GameMenuItem::new_text_item(ctx, &text, e.next_page, x, y, w, h),
-                    NewGameMenuItemDataVariant::InputItem { is_num, prompt, initial_value } => {
-                        GameMenuItem::new_input_item(ctx, &prompt, initial_value.to_string(), is_num, e.next_page, x, y, w, h)
-                    }
-                    NewGameMenuItemDataVariant::ImageItem { image, caption } => {
-                        GameMenuItem::new_image_item(ctx, image, &caption, e.next_page, x, y, w, h)
-                    }
+                    NewGameMenuItemDataVariant::InputItem { is_num, prompt, initial_value } =>
+                        GameMenuItem::new_input_item(ctx, &prompt, initial_value.to_string(), is_num, e.next_page, x, y, w, h),
+                    NewGameMenuItemDataVariant::ImageItem { image, caption } =>
+                        GameMenuItem::new_image_item(ctx, image, &caption, e.next_page, x, y, w, h),
                 }
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -72,21 +72,19 @@ impl Scene for GameMenuItemList {
     fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, _: bool) {
         if let Some(vkeycode) = key_input.keycode {
             match vkeycode {
-                VirtualKeyCode::Up => {
+                VirtualKeyCode::Up =>
                     if self.selected_item > 0 {
                         self.items[self.selected_item].deselect();
                         self.selected_item -= 1;
                         self.items[self.selected_item].select();
-                    }
-                }
+                    },
 
-                VirtualKeyCode::Down => {
+                VirtualKeyCode::Down =>
                     if self.selected_item < self.items.len() - 1 {
                         self.items[self.selected_item].deselect();
                         self.selected_item += 1;
                         self.items[self.selected_item].select();
-                    }
-                }
+                    },
                 VirtualKeyCode::Return => {
                     self.has_next_scene = true;
                 }

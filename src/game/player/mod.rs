@@ -49,4 +49,16 @@ impl Player {
     pub fn new(username: String, player_settings: PlayerSettings) -> Self {
         Self { id: Uuid::new_v4(), username, completed_puzzles: BTreeMap::new(), player_settings }
     }
+    pub fn startup(ctx: &mut Context) -> bool {
+        let mut opt_player = PLAYER.lock().unwrap();
+        let loaded_player = Player::load(ctx);
+
+        match loaded_player {
+            Err(_) => true,
+            Ok(p) => {
+                *opt_player = Some(p);
+                false
+            }
+        }
+    }
 }

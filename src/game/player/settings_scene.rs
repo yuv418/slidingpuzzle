@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ggez::{graphics::Color, input::keyboard::KeyCode, Context, GameResult};
+use ggez::{input::keyboard::KeyCode, Context, GameResult};
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{
@@ -14,6 +14,7 @@ use crate::game::{
         main_menu::MainMenu,
         menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
     },
+    resources::theme::Theme,
     scene::Scene,
     ui::uitext::UIText,
 };
@@ -60,12 +61,12 @@ impl SettingsScene {
         Ok(())
     }
     pub fn new(ctx: &mut Context, intro: bool) -> GameResult<Self> {
-        let greeting = Rc::new(RefCell::new(UIText::new("Hi!".to_string(), Color::BLACK, 58.8, DrawablePos { x: 90.0, y: 90.0 })));
+        let greeting = Rc::new(RefCell::new(UIText::new("Hi!".to_string(), Theme::fg_color(), 58.8, DrawablePos { x: 90.0, y: 90.0 })));
         let g_sz = greeting.borrow().text.measure(ctx)?;
 
         let welcome = Rc::new(RefCell::new(UIText::new(
             "Welcome to Sliding Puzzle!".to_string(),
-            Color::BLACK,
+            Theme::fg_color(),
             58.8,
             DrawablePos { x: 90.0, y: g_sz.y + 90.0 },
         )));
@@ -106,7 +107,7 @@ impl SettingsScene {
 
         let enter_confirm = Rc::new(RefCell::new(UIText::new(
             "Press Enter to Confirm.".to_string(),
-            Color::BLACK,
+            Theme::fg_color(),
             58.8,
             DrawablePos { x: 90.0, y: o_y + 50.0 + options.borrow().height() },
         )));
@@ -145,7 +146,7 @@ impl SettingsScene {
             welcome,
             options,
             advance_scene: false,
-            main: UIText::new("Settings".to_string(), Color::BLACK, 58.8, DrawablePos { x: 90.0, y: 90.0 }),
+            main: UIText::new("Settings".to_string(), Theme::fg_color(), 58.8, DrawablePos { x: 90.0, y: 90.0 }),
         })
     }
 }

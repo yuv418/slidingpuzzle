@@ -12,8 +12,10 @@
 // -> Display string + copy to clipboard
 // -> Start game
 
+use std::sync::Arc;
+
 use ggez::{
-    graphics::{Color, DrawParam, Image},
+    graphics::{DrawParam, Image},
     input::keyboard::KeyInput,
     winit::event::VirtualKeyCode,
     Context, GameResult,
@@ -26,6 +28,7 @@ use crate::game::{
     multiplayer::join_scene::JoinMultiplayerScene,
     player::PLAYER,
     puzzle::{puzzle_listing::PuzzleListing, tiles::TileState},
+    resources::{image_loader::ImageLoader, theme::Theme},
     scene::Scene,
     ui::uitext::UIText,
 };
@@ -34,7 +37,7 @@ pub struct PuzzleView {
     title_text: UIText,
 
     // Image
-    puzzle_image: Image,
+    puzzle_image: Arc<Image>,
 
     puzzle_action_mappings: GameMenuItemList,
     puzzle_num: usize,
@@ -76,11 +79,12 @@ impl PuzzleView {
             80.0,
         )?;
         Ok(Self {
-            title_text: UIText::new(format!("Puzzle {}", puzzle_num + 1), Color::BLACK, 78.0, DrawablePos { x: 90.0, y: 90.0 }),
+            title_text: UIText::new(format!("Puzzle {}", puzzle_num + 1), Theme::fg_color(), 78.0, DrawablePos { x: 90.0, y: 90.0 }),
             back: false,
             puzzle_num,
             puzzle_action_mappings,
-            puzzle_image: Image::from_path(ctx, format!("/images/{}.jpg", puzzle_num))?,
+            // We can panic here since the image should always be valid
+            puzzle_image: ImageLoader::get_img(puzzle_num).expect("Incorrect image provided to ImageLoader"),
         })
     }
 }
@@ -89,7 +93,7 @@ impl Drawable for PuzzleView {
     fn draw(&mut self, ctx: &mut Context, canvas: &mut ggez::graphics::Canvas) -> GameResult {
         let scale_factor = 300.0 / self.puzzle_image.width() as f32;
         let text_dim = self.title_text.text.measure(ctx)?;
-        canvas.draw(&self.puzzle_image, DrawParam::from([90.0, 90.0 + text_dim.y + 20.0]).scale([scale_factor; 2]));
+        canvas.draw(&*self.puzzle_image, DrawParam::from([90.0, 90.0 + text_dim.y + 20.0]).scale([scale_factor; 2]));
         self.puzzle_action_mappings.draw(ctx, canvas)?;
         self.title_text.draw(ctx, canvas)?;
         Ok(())

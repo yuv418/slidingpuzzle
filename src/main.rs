@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use game::player::{Player, PLAYER};
-use ggez::{event, graphics, GameResult};
+
+use ggez::{event, GameResult};
 
 mod game;
 
@@ -22,8 +22,6 @@ pub fn main() -> GameResult {
     }
     let (mut ctx, event_loop) = cb.build()?;
 
-    ctx.gfx.add_font("SecularOne-Regular", graphics::FontData::from_path(&ctx, "/fonts/SecularOne-Regular.ttf")?);
-
     /*
              180 px top padding
       60 + [        width        ] + 60
@@ -40,19 +38,7 @@ pub fn main() -> GameResult {
     // copied straight from https://github.com/ggez/ggez/blob/master/examples/files.rs
 
     // Drop the mutex by putting it in its own scope
-    let intro = {
-        let mut opt_player = PLAYER.lock().unwrap();
-        let loaded_player = Player::load(&mut ctx);
-
-        match loaded_player {
-            Err(_) => true,
-            Ok(p) => {
-                *opt_player = Some(p);
-                false
-            }
-        }
-    };
-    let state = game::GameState::new(&mut ctx, intro)?;
+    let state = game::GameState::new(&mut ctx)?;
 
     // ctx.gfx.set_screen_coordinates(&mut ctx, Rect::new(0.0, 0.0, win_width, win_height))?
 

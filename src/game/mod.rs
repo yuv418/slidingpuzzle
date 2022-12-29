@@ -1,11 +1,13 @@
-use self::gmenu::game_menu::GameMenu;
-use self::gmenu::main_menu::MainMenu;
 
+
+
+use self::resources::theme::Theme;
+use self::resources::ResourceManager;
 use self::scene::Scene;
 use ggez::event;
 use ggez::glam::Vec2;
 use ggez::graphics;
-use ggez::graphics::Color;
+
 use ggez::graphics::DrawMode;
 use ggez::graphics::Mesh;
 use ggez::graphics::Rect;
@@ -20,6 +22,7 @@ pub mod drawable;
 pub mod gmenu;
 pub mod player;
 pub mod puzzle;
+pub mod resources;
 pub mod scene;
 pub mod ui;
 
@@ -37,18 +40,9 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(context: &mut Context, intro: bool) -> GameResult<Self> {
+    pub fn new(context: &mut Context) -> GameResult<Self> {
         // Loop through and make the tiles
-        Ok(Self {
-            current_scene: if intro {
-                Box::new(player::settings_scene::SettingsScene::new(context, true)?)
-            } else {
-                Box::new(GameMenu::new::<MainMenu>(context)?)
-            },
-            prev_scene: None,
-            set_winsize: false,
-            scene_transition: None,
-        })
+        Ok(Self { current_scene: Box::new(ResourceManager::new(context)?), prev_scene: None, set_winsize: false, scene_transition: None })
     }
 }
 
@@ -73,7 +67,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
         Ok(())
     }
     fn draw(&mut self, ctx: &mut ggez::Context) -> GameResult {
-        let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::from([1.0, 1.0, 1.0, 1.0]));
+        let mut canvas = graphics::Canvas::from_frame(ctx, Theme::bg_color());
 
         if let Some(seq) = &mut self.scene_transition {
             seq.advance_by(0.01);
@@ -82,7 +76,7 @@ impl event::EventHandler<ggez::GameError> for GameState {
                 ctx,
                 DrawMode::fill(),
                 Rect { x: 0.0, y: if seq.progress() > 0.5 { drawable_size.1 - seq.now() } else { 0.0 }, w: drawable_size.0, h: seq.now() },
-                Color::WHITE,
+                Theme::fg_color(),
             )?;
 
             if seq.progress() < 0.5 {
