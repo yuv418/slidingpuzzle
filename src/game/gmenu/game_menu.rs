@@ -7,7 +7,7 @@ use super::menu_item_list::{GameMenuItemList, NewGameMenuItemData};
 use crate::game::{drawable::Drawable as SlidingPuzzleDrawable, scene::Scene};
 use ggez::graphics::Canvas;
 
-use ggez::input::keyboard::KeyInput;
+
 use ggez::{Context, GameResult};
 
 pub trait GameMenuData {

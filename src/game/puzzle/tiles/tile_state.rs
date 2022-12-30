@@ -8,9 +8,7 @@ use std::{cell::RefCell, io::BufReader, rc::Rc};
 
 use ggez::{
     graphics::{Canvas, Image, ImageFormat},
-    input::keyboard::KeyInput,
     timer::TimeContext,
-    winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 
@@ -301,7 +299,7 @@ impl TileState {
     }
 
     pub fn center_xy(ctx: &mut Context) -> (f32, f32) {
-        let (w, h) = ctx.gfx.drawable_size();
+        let (w, _h) = ctx.gfx.drawable_size();
         // Calculate unexpanded grid size and set x. Y does not matter as TileState
         // automatically adds padding.
         ((w - (2.0 * TILE_PADDING_X + IMAGE_SIDELEN as f32)) / 2.0, 0.0)

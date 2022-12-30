@@ -113,14 +113,14 @@ impl event::EventHandler<ggez::GameError> for GameState {
         Ok(())
     }
 
-    fn gamepad_button_down_event(&mut self, ctx: &mut Context, btn: Button, id: GamepadId) -> Result<(), ggez::GameError> {
+    fn gamepad_button_down_event(&mut self, ctx: &mut Context, btn: Button, _id: GamepadId) -> Result<(), ggez::GameError> {
         if let Some(inp) = self.gc_inp.process_button_input(btn) {
             self.current_scene.handle_input_event(ctx, inp);
         }
         Ok(())
     }
 
-    fn gamepad_axis_event(&mut self, ctx: &mut Context, axis: Axis, value: f32, id: ggez::event::GamepadId) -> GameResult {
+    fn gamepad_axis_event(&mut self, ctx: &mut Context, axis: Axis, value: f32, _id: ggez::event::GamepadId) -> GameResult {
         if let Some(inp) = self.gc_inp.process_axis_input(axis, value) {
             self.current_scene.handle_input_event(ctx, inp);
         }

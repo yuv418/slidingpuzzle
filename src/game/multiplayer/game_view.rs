@@ -3,8 +3,6 @@ use std::sync::Arc;
 use ggez::{
     glam::Vec2,
     graphics::{DrawMode, Mesh, Rect},
-    input::keyboard::KeyInput,
-    winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};

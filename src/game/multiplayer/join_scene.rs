@@ -6,7 +6,7 @@
 // Display conn string + copy clipboard + wait for clipboard
 
 use arboard::Clipboard;
-use ggez::{winit::event::VirtualKeyCode, Context, GameError, GameResult};
+use ggez::{Context, GameError, GameResult};
 use log::info;
 
 use crate::game::{

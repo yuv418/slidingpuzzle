@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use ggez::{input::keyboard::KeyCode, Context, GameResult};
+use ggez::{Context, GameResult};
 use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 
 use crate::game::{

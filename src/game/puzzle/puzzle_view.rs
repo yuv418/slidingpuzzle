@@ -16,8 +16,6 @@ use std::sync::Arc;
 
 use ggez::{
     graphics::{DrawParam, Image},
-    input::keyboard::KeyInput,
-    winit::event::VirtualKeyCode,
     Context, GameResult,
 };
 

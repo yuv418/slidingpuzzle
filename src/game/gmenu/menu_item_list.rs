@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ggez::{graphics::Image, input::keyboard::KeyInput, winit::event::VirtualKeyCode, Context, GameResult};
+use ggez::{graphics::Image, Context, GameResult};
 
 use crate::game::{
     animation::{animatable::Animatable, DrawablePos},
