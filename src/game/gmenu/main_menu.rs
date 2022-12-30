@@ -1,3 +1,5 @@
+use std::process::exit;
+
 use ggez::Context;
 
 use crate::game::{
@@ -50,6 +52,8 @@ pub fn choose_puzzle(context: &mut Context) -> Box<dyn Scene> {
     Box::new(PuzzleListing::new(context, 0).expect("Failed to create puzzle listing"))
 }
 
+pub fn quit_game(_: &mut Context) -> Box<dyn Scene> { exit(0); }
+
 pub struct MainMenu {}
 
 impl GameMenuData for MainMenu {
@@ -70,6 +74,10 @@ impl GameMenuData for MainMenu {
             NewGameMenuItemData {
                 variant: NewGameMenuItemDataVariant::TextItem { text: "Settings".to_string() },
                 next_page: Some(Box::new(settings_scene)),
+            },
+            NewGameMenuItemData {
+                variant: NewGameMenuItemDataVariant::TextItem { text: "Quit".to_string() },
+                next_page: Some(Box::new(quit_game)),
             },
         ]
     }
