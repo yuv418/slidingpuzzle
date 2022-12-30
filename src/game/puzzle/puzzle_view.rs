@@ -49,8 +49,9 @@ pub struct PuzzleView {
 fn create_singleplayer_game(context: &mut Context, puzzle_num: usize) -> Box<dyn Scene> {
     let opt_player = PLAYER.lock().unwrap();
     let player = opt_player.as_ref().unwrap();
+    let pos = TileState::center_xy(context);
     Box::new(
-        TileState::new_singleplayer(context, puzzle_num, player.player_settings.num_rows_cols, 0.0, 0.0)
+        TileState::new_singleplayer(context, puzzle_num, player.player_settings.num_rows_cols, pos)
             .expect("Failed to create singleplayer game"),
     )
 }

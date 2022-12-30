@@ -12,8 +12,8 @@ use crate::game::{
 
 const TILE_GAP: f32 = 20.0;
 
-const TILE_PADDING_X: f32 = 90.0;
-const TILE_PADDING_Y: f32 = 150.0;
+pub const TILE_PADDING_X: f32 = 90.0;
+pub const TILE_PADDING_Y: f32 = 150.0;
 
 pub struct Tile {
     // The size of a square tile (one side) in px

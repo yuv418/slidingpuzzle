@@ -29,7 +29,7 @@ use crate::game::{
 #[cfg(feature = "multiplayer")]
 use crate::game::multiplayer::MultiplayerGameMessage;
 
-use super::{tile_multiplayer::TileMultiplayerTransport, tile_random::TileRandom, Tile, TilePosition};
+use super::{tile::TILE_PADDING_X, tile_multiplayer::TileMultiplayerTransport, tile_random::TileRandom, Tile, TilePosition};
 
 enum GameStage {
     StartingAnimation,
@@ -46,6 +46,7 @@ impl Default for GameStage {
 // TODO: Add tile scale animation when the game is finished.
 
 const TOTAL_SCRAMBLE_SWAPS: u32 = 50;
+const IMAGE_SIDELEN: u32 = 600;
 const TILE_SLIDE_DURATION: f32 = 0.3;
 
 #[derive(Default)]
@@ -75,11 +76,11 @@ pub struct TileState {
 }
 
 impl TileState {
-    pub fn new_singleplayer(context: &mut Context, img_num: usize, num_rows_cols: usize, x: f32, y: f32) -> GameResult<Self> {
-        Self::new(context, img_num, num_rows_cols, x, y, TileMultiplayerTransport::new(None), false)
+    pub fn new_singleplayer(context: &mut Context, img_num: usize, num_rows_cols: usize, xy: (f32, f32)) -> GameResult<Self> {
+        Self::new(context, img_num, num_rows_cols, xy, TileMultiplayerTransport::new(None), false)
     }
     pub fn new(
-        context: &mut Context, img_num: usize, num_rows_cols: usize, x: f32, y: f32, transport: TileMultiplayerTransport, peer: bool,
+        context: &mut Context, img_num: usize, num_rows_cols: usize, (x, y): (f32, f32), transport: TileMultiplayerTransport, peer: bool,
     ) -> GameResult<Self> {
         // Peer determines whether or not a game is multiplayer
         /* Cannot use ImageLoader here b/c of this error in to_pixels ---
@@ -96,7 +97,7 @@ impl TileState {
         let mut img = ImageReader::new(BufReader::new(context.fs.open(format!("/images/{}.jpg", img_num))?));
         img.set_format(image::ImageFormat::Jpeg);
 
-        let img = img.decode().expect("failed to open image").resize(600, 600, FilterType::Lanczos3);
+        let img = img.decode().expect("failed to open image").resize(IMAGE_SIDELEN, IMAGE_SIDELEN, FilterType::Lanczos3);
 
         // How many tiles in a row? In a column?
         let col_cnt_tiles = num_rows_cols; // img.width() / tile_size;
@@ -297,6 +298,13 @@ impl TileState {
             duration: self.timer.as_ref().unwrap().time_since_start(),
             move_count: self.total_moves,
         }
+    }
+
+    pub fn center_xy(ctx: &mut Context) -> (f32, f32) {
+        let (w, h) = ctx.gfx.drawable_size();
+        // Calculate unexpanded grid size and set x. Y does not matter as TileState
+        // automatically adds padding.
+        ((w - (2.0 * TILE_PADDING_X + IMAGE_SIDELEN as f32)) / 2.0, 0.0)
     }
 }
 impl Scene for TileState {

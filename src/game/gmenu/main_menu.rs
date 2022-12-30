@@ -19,6 +19,7 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
     // Player guaranteed to be some at this point
     let player = opt_player.as_ref().unwrap();
 
+    let pos = TileState::center_xy(context);
     let tile_state = Box::new(
         TileState::new_singleplayer(
             context,
@@ -31,8 +32,7 @@ pub fn continue_game(context: &mut Context) -> Box<dyn Scene> {
                 0
             },
             player.player_settings.num_rows_cols,
-            0.0,
-            0.0,
+            pos,
         )
         .expect("Failed to create TileState"),
     );
