@@ -20,6 +20,7 @@ use crate::game::{
         animation::{Animation, AnimationData},
     },
     drawable::Drawable,
+    input::InputAction,
     player::{PuzzleStatistics, PLAYER},
     puzzle::puzzle_listing::PuzzleListing,
     scene::Scene,
@@ -332,41 +333,37 @@ impl Scene for TileState {
         Ok(())
     }
 
-    fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, repeat: bool) {
+    fn handle_input_event(&mut self, _ctx: &mut Context, key_input: InputAction) {
         let (i, j) = self.blank_cell;
         let mut swap_tile = (i, j);
 
         // TODO how do we make escape callable during animation?
-        if !repeat {
-            if let GameStage::Started = self.game_stage {
-                if let Some(vkeycode) = key_input.keycode {
-                    match vkeycode {
-                        // Tile below space
-                        VirtualKeyCode::Up if i + 1 < self.ref_board.len() => swap_tile = (i + 1, j),
-                        // Tile above space
-                        VirtualKeyCode::Down if i != 0 => swap_tile = (i - 1, j),
-                        // Tile left of space
-                        VirtualKeyCode::Left if j + 1 < self.ref_board[i].len() => swap_tile = (i, j + 1),
-                        // Tile right of space
-                        VirtualKeyCode::Right if j != 0 => swap_tile = (i, j - 1),
-                        // Cancel game
-                        VirtualKeyCode::Escape => self.game_stage = GameStage::Cancelled,
-                        _ => {}
-                    }
-                    if swap_tile != self.blank_cell {
-                        self.swap_ref_tiles(self.blank_cell, swap_tile, TILE_SLIDE_DURATION);
-                        self.total_moves += 1;
-                    }
-                }
-                // TODO move this to the update method
-                if !self.peer {
-                    // Immediately will happen during this
-                    self.check_completed();
-                    if let GameStage::FinishingAnimation = self.game_stage {
-                        let stats = self.get_puzzle_statistics();
-                        self.puzzle_statistics = Some(stats.clone());
-                        self.transport.end_game(stats);
-                    }
+        if let GameStage::Started = self.game_stage {
+            match key_input {
+                // Tile below space
+                InputAction::Up if i + 1 < self.ref_board.len() => swap_tile = (i + 1, j),
+                // Tile above space
+                InputAction::Down if i != 0 => swap_tile = (i - 1, j),
+                // Tile left of space
+                InputAction::Left if j + 1 < self.ref_board[i].len() => swap_tile = (i, j + 1),
+                // Tile right of space
+                InputAction::Right if j != 0 => swap_tile = (i, j - 1),
+                // Cancel game
+                InputAction::Cancel => self.game_stage = GameStage::Cancelled,
+                _ => {}
+            }
+            if swap_tile != self.blank_cell {
+                self.swap_ref_tiles(self.blank_cell, swap_tile, TILE_SLIDE_DURATION);
+                self.total_moves += 1;
+            }
+            // TODO move this to the update method
+            if !self.peer {
+                // Immediately will happen during this
+                self.check_completed();
+                if let GameStage::FinishingAnimation = self.game_stage {
+                    let stats = self.get_puzzle_statistics();
+                    self.puzzle_statistics = Some(stats.clone());
+                    self.transport.end_game(stats);
                 }
             }
         }

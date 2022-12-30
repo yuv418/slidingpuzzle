@@ -1,3 +1,4 @@
+use crate::game::input::InputAction;
 use crate::game::resources::theme::Theme;
 use crate::game::{animation::DrawablePos, ui::uitext::UIText};
 
@@ -39,9 +40,7 @@ impl SlidingPuzzleDrawable for GameMenu {
 }
 
 impl Scene for GameMenu {
-    fn handle_key_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) {
-        self.menu_mappings.handle_key_event(ctx, key_input, repeat);
-    }
+    fn handle_input_event(&mut self, ctx: &mut Context, key_input: InputAction) { self.menu_mappings.handle_input_event(ctx, key_input); }
 
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> { self.menu_mappings.next_scene(ctx) }
 }

@@ -5,6 +5,7 @@ use ggez::{graphics::Image, input::keyboard::KeyInput, winit::event::VirtualKeyC
 use crate::game::{
     animation::{animatable::Animatable, DrawablePos},
     drawable::Drawable,
+    input::InputAction,
     scene::Scene,
 };
 
@@ -67,27 +68,25 @@ impl Drawable for GameMenuItemList {
 }
 
 impl Scene for GameMenuItemList {
-    fn handle_key_event(&mut self, _ctx: &mut Context, key_input: KeyInput, _: bool) {
-        if let Some(vkeycode) = key_input.keycode {
-            match vkeycode {
-                VirtualKeyCode::Up =>
-                    if self.selected_item > 0 {
-                        self.items[self.selected_item].deselect();
-                        self.selected_item -= 1;
-                        self.items[self.selected_item].select();
-                    },
+    fn handle_input_event(&mut self, _ctx: &mut Context, key_input: InputAction) {
+        match key_input {
+            InputAction::Up =>
+                if self.selected_item > 0 {
+                    self.items[self.selected_item].deselect();
+                    self.selected_item -= 1;
+                    self.items[self.selected_item].select();
+                },
 
-                VirtualKeyCode::Down =>
-                    if self.selected_item < self.items.len() - 1 {
-                        self.items[self.selected_item].deselect();
-                        self.selected_item += 1;
-                        self.items[self.selected_item].select();
-                    },
-                VirtualKeyCode::Return => {
-                    self.has_next_scene = true;
-                }
-                _ => {}
+            InputAction::Down =>
+                if self.selected_item < self.items.len() - 1 {
+                    self.items[self.selected_item].deselect();
+                    self.selected_item += 1;
+                    self.items[self.selected_item].select();
+                },
+            InputAction::Select => {
+                self.has_next_scene = true;
             }
+            _ => {}
         }
     }
 

@@ -25,6 +25,7 @@ use crate::game::{
     animation::DrawablePos,
     drawable::Drawable,
     gmenu::menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
+    input::InputAction,
     multiplayer::join_scene::JoinMultiplayerScene,
     player::PLAYER,
     puzzle::{puzzle_listing::PuzzleListing, tiles::TileState},
@@ -101,11 +102,11 @@ impl Drawable for PuzzleView {
 }
 
 impl Scene for PuzzleView {
-    fn handle_key_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) {
-        if let Some(VirtualKeyCode::Escape) = key_input.keycode {
+    fn handle_input_event(&mut self, ctx: &mut Context, key_input: InputAction) {
+        if let InputAction::Cancel = key_input {
             self.back = true;
         }
-        self.puzzle_action_mappings.handle_key_event(ctx, key_input, repeat);
+        self.puzzle_action_mappings.handle_input_event(ctx, key_input);
     }
 
     fn next_scene(&mut self, ctx: &mut Context) -> Option<Box<dyn Scene>> {

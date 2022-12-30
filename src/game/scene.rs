@@ -1,10 +1,10 @@
-use ggez::{graphics::Canvas, input::keyboard::KeyInput, Context, GameResult};
+use ggez::{graphics::Canvas, Context, GameResult};
 
-use super::drawable::Drawable;
+use super::{drawable::Drawable, input::InputAction};
 
 //
 pub trait Scene: Drawable {
-    fn handle_key_event(&mut self, _ctx: &mut Context, _key_input: KeyInput, _repeat: bool) {}
+    fn handle_input_event(&mut self, _ctx: &mut Context, _key_input: InputAction) {}
     fn next_scene(&mut self, _ctx: &mut Context) -> Option<Box<dyn Scene>> { None }
     // To use when the scene is transitioning to/from the next scene
     fn draw_transition(&mut self, ctx: &mut Context, canvas: &mut Canvas) -> GameResult { self.draw(ctx, canvas) }

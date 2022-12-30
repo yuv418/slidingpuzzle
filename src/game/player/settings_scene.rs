@@ -14,6 +14,7 @@ use crate::game::{
         main_menu::MainMenu,
         menu_item_list::{GameMenuItemList, NewGameMenuItemData, NewGameMenuItemDataVariant},
     },
+    input::InputAction,
     resources::theme::Theme,
     scene::Scene,
     ui::uitext::UIText,
@@ -173,8 +174,8 @@ impl Drawable for SettingsScene {
 }
 impl Scene for SettingsScene {
     fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) { self.options.borrow_mut().text_input_event(ctx, c); }
-    fn handle_key_event(&mut self, ctx: &mut ggez::Context, key_input: ggez::input::keyboard::KeyInput, repeat: bool) {
-        if let Some(KeyCode::Return) = key_input.keycode {
+    fn handle_input_event(&mut self, ctx: &mut ggez::Context, key_input: InputAction) {
+        if let InputAction::Select = key_input {
             let mut valid_inputs = true;
             for option in &mut self.options.borrow_mut().items {
                 // Always unwrap since all of them are input boxes
@@ -187,7 +188,7 @@ impl Scene for SettingsScene {
             }
         }
         // TODO make sure to handle this only if the opening animations have finished
-        self.options.borrow_mut().handle_key_event(ctx, key_input, repeat);
+        self.options.borrow_mut().handle_input_event(ctx, key_input);
     }
 
     fn next_scene(&mut self, ctx: &mut ggez::Context) -> Option<Box<dyn Scene>> {

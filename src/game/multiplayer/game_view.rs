@@ -12,6 +12,7 @@ use keyframe::{functions::EaseInOut, keyframes, AnimationSequence};
 use crate::game::{
     animation::DrawablePos,
     drawable::Drawable,
+    input::InputAction,
     player::PLAYER,
     puzzle::{
         puzzle_view::PuzzleView,
@@ -138,12 +139,12 @@ impl Scene for MultiplayerGameView {
 
         self.peer_tile_state.update(ctx)
     }
-    fn handle_key_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) {
-        self.user_tile_state.handle_key_event(ctx, key_input, repeat);
+    fn handle_input_event(&mut self, ctx: &mut Context, key_input: InputAction) {
         // This will eventually get changed
-        if let Some(VirtualKeyCode::Escape) = key_input.keycode {
+        if let InputAction::Cancel = key_input {
             self.game_cancelled = true;
         }
+        self.user_tile_state.handle_input_event(ctx, key_input);
     }
 }
 

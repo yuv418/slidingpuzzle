@@ -10,8 +10,8 @@ use ggez::{winit::event::VirtualKeyCode, Context, GameError, GameResult};
 use log::info;
 
 use crate::game::{
-    animation::DrawablePos, drawable::Drawable, player::PLAYER, puzzle::puzzle_view::PuzzleView, resources::theme::Theme, scene::Scene,
-    ui::uitext::UIText,
+    animation::DrawablePos, drawable::Drawable, input::InputAction, player::PLAYER, puzzle::puzzle_view::PuzzleView,
+    resources::theme::Theme, scene::Scene, ui::uitext::UIText,
 };
 
 use super::{game_view::MultiplayerGameView, transport::MultiplayerTransport, MultiplayerGameMessage};
@@ -146,44 +146,42 @@ impl Scene for JoinMultiplayerScene {
         }
         Ok(())
     }
-    fn handle_key_event(&mut self, _ctx: &mut Context, key_input: ggez::input::keyboard::KeyInput, _repeat: bool) {
-        if let Some(vkeycode) = key_input.keycode {
-            match vkeycode {
-                VirtualKeyCode::Escape => {
-                    self.game_cancelled = true;
-                }
-                VirtualKeyCode::Return => {
-                    let conn_str = self
-                        .clipboard
-                        .get_text()
-                        .map_err(|_| GameError::CustomError("Failed to get connection string from clipboard".to_string()))
-                        // Make this method return a result so this doesn't happen
-                        .unwrap();
-                    if self.creator {
-                        if let Err(_e) =
-                            self.transport.as_ref().unwrap().event_push_buffer.send(MultiplayerGameMessage::ConnectionString(conn_str))
-                        {
-                            println!("failed to send event");
-                        }
-                    } else {
-                        self.transport = Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
-
-                        self.transport
-                            .as_ref()
-                            .unwrap()
-                            .event_push_buffer
-                            .send(MultiplayerGameMessage::Hello {
-                                username: {
-                                    let opt_p = PLAYER.lock().unwrap();
-                                    let p = opt_p.as_ref().unwrap();
-                                    p.username()
-                                },
-                            })
-                            .unwrap();
-                    }
-                }
-                _ => {}
+    fn handle_input_event(&mut self, _ctx: &mut Context, key_input: InputAction) {
+        match key_input {
+            InputAction::Cancel => {
+                self.game_cancelled = true;
             }
+            InputAction::Select => {
+                let conn_str = self
+                    .clipboard
+                    .get_text()
+                    .map_err(|_| GameError::CustomError("Failed to get connection string from clipboard".to_string()))
+                    // Make this method return a result so this doesn't happen
+                    .unwrap();
+                if self.creator {
+                    if let Err(_e) =
+                        self.transport.as_ref().unwrap().event_push_buffer.send(MultiplayerGameMessage::ConnectionString(conn_str))
+                    {
+                        println!("failed to send event");
+                    }
+                } else {
+                    self.transport = Some(MultiplayerTransport::create_game(Some(conn_str)).unwrap());
+
+                    self.transport
+                        .as_ref()
+                        .unwrap()
+                        .event_push_buffer
+                        .send(MultiplayerGameMessage::Hello {
+                            username: {
+                                let opt_p = PLAYER.lock().unwrap();
+                                let p = opt_p.as_ref().unwrap();
+                                p.username()
+                            },
+                        })
+                        .unwrap();
+                }
+            }
+            _ => {}
         }
     }
 }

@@ -4,6 +4,7 @@ use crate::game::{
     animation::DrawablePos,
     drawable::Drawable,
     gmenu::{game_menu::GameMenu, main_menu::MainMenu, menu_item::GameMenuItem},
+    input::InputAction,
     player::PLAYER,
     puzzle::puzzle_view::PuzzleView,
     resources::{image_loader::ImageLoader, theme::Theme},
@@ -83,50 +84,48 @@ impl Drawable for PuzzleListing {
 }
 
 impl Scene for PuzzleListing {
-    fn handle_key_event(&mut self, _ctx: &mut ggez::Context, key_input: ggez::input::keyboard::KeyInput, _repeat: bool) {
+    fn handle_input_event(&mut self, _ctx: &mut ggez::Context, key_input: InputAction) {
         let old_selected = self.currently_selected;
 
         let (o_i, o_j) = old_selected;
 
-        if let Some(vkeycode) = key_input.keycode {
-            match vkeycode {
-                VirtualKeyCode::Up =>
-                    if self.currently_selected.0 > 0 {
-                        self.currently_selected.0 -= 1;
-                    },
+        match key_input {
+            InputAction::Up =>
+                if self.currently_selected.0 > 0 {
+                    self.currently_selected.0 -= 1;
+                },
 
-                VirtualKeyCode::Down =>
-                    if self.currently_selected.0 < 1 && self.menu_items[o_i + 1][o_j].is_some() {
-                        self.currently_selected.0 += 1;
-                    },
-                VirtualKeyCode::Left => {
-                    if self.currently_selected.1 > 0 {
-                        self.currently_selected.1 -= 1;
-                    } else {
-                        // Page left
-                        self.page_direction = Some(PaginationDirection::Left);
-                    }
+            InputAction::Down =>
+                if self.currently_selected.0 < 1 && self.menu_items[o_i + 1][o_j].is_some() {
+                    self.currently_selected.0 += 1;
+                },
+            InputAction::Left => {
+                if self.currently_selected.1 > 0 {
+                    self.currently_selected.1 -= 1;
+                } else {
+                    // Page left
+                    self.page_direction = Some(PaginationDirection::Left);
                 }
-                VirtualKeyCode::Right => {
-                    if self.currently_selected.1 < 1 && self.menu_items[o_i][o_j + 1].is_some() {
-                        self.currently_selected.1 += 1;
-                    } else {
-                        // Page right
-                        self.page_direction = Some(PaginationDirection::Right);
-                    }
-                }
-                VirtualKeyCode::Escape => {
-                    self.back = true;
-                }
-                VirtualKeyCode::Return => {
-                    self.start_game = true;
-                }
-                _ => {}
             }
-            if old_selected != self.currently_selected {
-                self.menu_items[old_selected.0][old_selected.1].as_mut().unwrap().deselect();
-                self.menu_items[self.currently_selected.0][self.currently_selected.1].as_mut().unwrap().select();
+            InputAction::Right => {
+                if self.currently_selected.1 < 1 && self.menu_items[o_i][o_j + 1].is_some() {
+                    self.currently_selected.1 += 1;
+                } else {
+                    // Page right
+                    self.page_direction = Some(PaginationDirection::Right);
+                }
             }
+            InputAction::Cancel => {
+                self.back = true;
+            }
+            InputAction::Select => {
+                self.start_game = true;
+            }
+            _ => {}
+        }
+        if old_selected != self.currently_selected {
+            self.menu_items[old_selected.0][old_selected.1].as_mut().unwrap().deselect();
+            self.menu_items[self.currently_selected.0][self.currently_selected.1].as_mut().unwrap().select();
         }
     }
 

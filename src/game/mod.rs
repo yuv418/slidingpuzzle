@@ -1,10 +1,15 @@
+use self::input::controller::GameControllerInput;
+use self::input::keyboard::KeyboardInput;
 use self::resources::theme::Theme;
 use self::resources::ResourceManager;
 use self::scene::Scene;
 use ggez::event;
+use ggez::event::Axis;
+use ggez::event::Button;
 use ggez::glam::Vec2;
 use ggez::graphics;
 
+use ggez::event::GamepadId;
 use ggez::graphics::DrawMode;
 use ggez::graphics::Mesh;
 use ggez::graphics::Rect;
@@ -17,6 +22,7 @@ use keyframe::AnimationSequence;
 pub mod animation;
 pub mod drawable;
 pub mod gmenu;
+pub mod input;
 pub mod player;
 pub mod puzzle;
 pub mod resources;
@@ -32,6 +38,9 @@ pub struct GameState {
 
     pub set_winsize: bool,
 
+    // Input related
+    gc_inp: GameControllerInput,
+
     // Scene transition animation variables
     scene_transition: Option<AnimationSequence<f32>>,
 }
@@ -39,19 +48,17 @@ pub struct GameState {
 impl GameState {
     pub fn new(context: &mut Context) -> GameResult<Self> {
         // Loop through and make the tiles
-        Ok(Self { current_scene: Box::new(ResourceManager::new(context)?), prev_scene: None, set_winsize: false, scene_transition: None })
+        Ok(Self {
+            current_scene: Box::new(ResourceManager::new(context)?),
+            prev_scene: None,
+            set_winsize: false,
+            scene_transition: None,
+            gc_inp: GameControllerInput::default(),
+        })
     }
 }
 
 impl event::EventHandler<ggez::GameError> for GameState {
-    fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) -> GameResult {
-        self.current_scene.text_input_event(ctx, c);
-        Ok(())
-    }
-    fn key_down_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) -> GameResult {
-        self.current_scene.handle_key_event(ctx, key_input, repeat);
-        Ok(())
-    }
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         if let None = self.scene_transition {
             if let Some(next_scene) = self.current_scene.next_scene(ctx) {
@@ -92,5 +99,31 @@ impl event::EventHandler<ggez::GameError> for GameState {
             self.current_scene.draw(ctx, &mut canvas)?;
         }
         canvas.finish(ctx)
+    }
+
+    fn key_down_event(&mut self, ctx: &mut Context, key_input: KeyInput, repeat: bool) -> GameResult {
+        if let Some(inp) = KeyboardInput::process_key_input(key_input, repeat) {
+            self.current_scene.handle_input_event(ctx, inp);
+        }
+        Ok(())
+    }
+
+    fn text_input_event(&mut self, ctx: &mut ggez::Context, c: char) -> GameResult {
+        self.current_scene.text_input_event(ctx, c);
+        Ok(())
+    }
+
+    fn gamepad_button_down_event(&mut self, ctx: &mut Context, btn: Button, id: GamepadId) -> Result<(), ggez::GameError> {
+        if let Some(inp) = self.gc_inp.process_button_input(btn) {
+            self.current_scene.handle_input_event(ctx, inp);
+        }
+        Ok(())
+    }
+
+    fn gamepad_axis_event(&mut self, ctx: &mut Context, axis: Axis, value: f32, id: ggez::event::GamepadId) -> GameResult {
+        if let Some(inp) = self.gc_inp.process_axis_input(axis, value) {
+            self.current_scene.handle_input_event(ctx, inp);
+        }
+        Ok(())
     }
 }
