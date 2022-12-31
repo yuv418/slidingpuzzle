@@ -27,7 +27,12 @@ use crate::game::{
 #[cfg(feature = "multiplayer")]
 use crate::game::multiplayer::MultiplayerGameMessage;
 
-use super::{tile::TILE_PADDING_X, tile_multiplayer::TileMultiplayerTransport, tile_random::TileRandom, Tile, TilePosition};
+use super::{
+    tile::{TILE_PADDING_X, TILE_PADDING_Y},
+    tile_multiplayer::TileMultiplayerTransport,
+    tile_random::TileRandom,
+    Tile, TilePosition,
+};
 
 enum GameStage {
     StartingAnimation,
@@ -299,10 +304,10 @@ impl TileState {
     }
 
     pub fn center_xy(ctx: &mut Context) -> (f32, f32) {
-        let (w, _h) = ctx.gfx.drawable_size();
+        let (w, h) = ctx.gfx.drawable_size();
         // Calculate unexpanded grid size and set x. Y does not matter as TileState
         // automatically adds padding.
-        ((w - (2.0 * TILE_PADDING_X + IMAGE_SIDELEN as f32)) / 2.0, 0.0)
+        ((w - (2.0 * TILE_PADDING_X + IMAGE_SIDELEN as f32)) / 2.0, (h - (2.0 * TILE_PADDING_Y + IMAGE_SIDELEN as f32)) / 2.0)
     }
 }
 impl Scene for TileState {

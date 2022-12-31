@@ -1,6 +1,11 @@
 use std::path::PathBuf;
 
-use ggez::{event, GameResult};
+use ggez::{
+    conf::{FullscreenType, WindowMode},
+    event,
+    winit::dpi::LogicalSize,
+    GameResult,
+};
 
 mod game;
 
@@ -10,9 +15,18 @@ mod game;
 
 pub fn main() -> GameResult {
     env_logger::init();
+
+    let mut winmode = ggez::conf::WindowMode::default();
+
+    if let Some("fullscreen") = std::env::args().nth(1).as_deref() {
+        winmode = winmode.fullscreen_type(FullscreenType::Desktop);
+    } else {
+        winmode = winmode.dimensions(1820.0, 1030.0);
+    }
+
     let mut cb = ggez::ContextBuilder::new("SlidingPuzzle", "cdknight")
         .window_setup(ggez::conf::WindowSetup::default().title("Sliding Puzzle"))
-        .window_mode(ggez::conf::WindowMode::default().min_dimensions(1820.0, 1030.0).resizable(true));
+        .window_mode(winmode);
     if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
         let mut path = PathBuf::from(manifest_dir);
         path.push("resources");
@@ -20,6 +34,14 @@ pub fn main() -> GameResult {
         cb = cb.add_resource_path(path);
     }
     let (mut ctx, event_loop) = cb.build()?;
+
+    if let Some("fullscreen") = std::env::args().nth(1).as_deref() {
+        ctx.gfx.set_mode(WindowMode {
+            fullscreen_type: FullscreenType::Desktop,
+            logical_size: Some(LogicalSize::from([ctx.gfx.drawable_size().0, 1030.0])),
+            ..Default::default()
+        })?;
+    }
 
     /*
              180 px top padding

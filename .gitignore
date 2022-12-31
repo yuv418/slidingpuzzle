@@ -1,3 +1,4 @@
 /target
 /resources/images/*
 /resources/theme.json
+/out/
