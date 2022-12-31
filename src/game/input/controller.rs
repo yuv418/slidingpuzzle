@@ -34,7 +34,10 @@ impl GameControllerInput {
                 println!("Triggered.");
                 Some(InputAction::Left)
             }
-            Axis::RightStickX | Axis::LeftStickX if (diff_x.abs()) >= 0.6 => {
+            Axis::RightStickX | Axis::LeftStickX
+                if diff_x.abs() >= 0.3
+                    && ((self.last_x > AXIS_TRIGGER_VALUE && diff_x < 0.0) || (self.last_x < -AXIS_TRIGGER_VALUE && diff_x > 0.0)) =>
+            {
                 self.valid_x = false;
                 println!("Stick is now invalid, waiting for new input");
                 None
@@ -51,7 +54,10 @@ impl GameControllerInput {
                 println!("Triggered.");
                 Some(InputAction::Down)
             }
-            Axis::RightStickY | Axis::LeftStickY if (diff_y.abs() >= 0.6) => {
+            Axis::RightStickY | Axis::LeftStickY
+                if diff_y.abs() >= 0.3
+                    && ((self.last_y > AXIS_TRIGGER_VALUE && diff_y < 0.0) || (self.last_y < -AXIS_TRIGGER_VALUE && diff_y > 0.0)) =>
+            {
                 println!("value {} last_y {} diff_y {}", value, self.last_y, diff_y);
                 self.valid_y = false;
                 None
